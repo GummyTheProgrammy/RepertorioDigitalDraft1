@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Repertório Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="phone" id="phone">
+
+  <!-- ===== Top half: setlist ===== -->
+  <section class="panel setlist-panel">
+    <header class="panel-head">
+      <h1>Repertório</h1>
+      <span class="count" id="setlistCount">0 músicas</span>
+    </header>
+    <div class="setlist-list" id="setlistList">
+      <!-- setlist rows injected by JS -->
+      <p class="empty-hint" id="setlistEmptyHint">Toque numa música da lista abaixo para adicionar aqui.</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ===== Bottom half: song bank ===== -->
+  <section class="panel bank-panel">
+    <header class="panel-head">
+      <h1>Banco de Músicas</h1>
+      <span class="count" id="bankCount">0 músicas</span>
+    </header>
+
+    <div class="import-bar">
+      <label class="filebtn" for="csvInput">📂 Importar CSV</label>
+      <input type="file" id="csvInput" accept=".csv,text/csv">
+      <button id="downloadSampleBtn" type="button">⬇️ CSV de exemplo</button>
+    </div>
+    <div class="import-status" id="importStatus"></div>
+
+    <div class="filters">
+      <select id="filterAfinacao"><option value="">Afinação: todas</option></select>
+      <select id="filterCategoria"><option value="">Categoria: todas</option></select>
+      <select id="filterNacional"><option value="">Nac./Int.: todos</option></select>
+    </div>
+
+    <div class="bank-list" id="bankList"></div>
+
+    <div class="print-bar">
+      <input type="text" id="tituloInput" value="Jardins do Jack" placeholder="Título do repertório">
+      <button id="printBtn" class="print-btn">🖨️ Imprimir Repertório</button>
+    </div>
+  </section>
+
+</div>
+
+<!-- ===== Hold/hover details popup ===== -->
+<div class="popup" id="popup">
+  <div class="popup-row"><span class="popup-label">Banda</span><span class="popup-value" id="popBanda"></span></div>
+  <div class="popup-row"><span class="popup-label">Afinação</span><span class="popup-value" id="popAfinacao"></span></div>
+  <div class="popup-row"><span class="popup-label">Quem começa</span><span class="popup-value" id="popQuem"></span></div>
+  <div class="popup-row"><span class="popup-label">Categoria</span><span class="popup-value" id="popCategoria"></span></div>
+  <div class="popup-row"><span class="popup-label">Nac./Int.</span><span class="popup-value" id="popNacional"></span></div>
+</div>
+
+<!-- ===== Hidden print sheets (built at print time) ===== -->
+<div id="printRoot"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
