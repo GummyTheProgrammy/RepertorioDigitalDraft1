@@ -14,6 +14,24 @@
 
 <div class="phone" id="phone">
 
+  <!-- ===== Welcome screen ===== -->
+  <section class="welcome-screen" id="welcomeScreen">
+    <div class="welcome-emoji">🎸</div>
+    <h1>Repertório Digital</h1>
+    <p>Monte o setlist do show arrastando as músicas de um banco de dados.
+       Para começar, escolha o CSV com as músicas da banda.</p>
+    <label class="filebtn welcome-btn primary" for="csvInput">📂 Escolher CSV</label>
+    <button id="welcomeSampleBtn" class="welcome-btn" type="button">✨ Usar exemplo</button>
+    <div class="import-status" id="welcomeStatus"></div>
+  </section>
+
+  <!-- ===== View toggle ===== -->
+  <div class="view-toggle" id="viewToggle">
+    <button type="button" data-view="setlist">Repertório</button>
+    <button type="button" data-view="both" class="active">Ambos</button>
+    <button type="button" data-view="bank">Banco</button>
+  </div>
+
   <!-- ===== Top half: setlist ===== -->
   <section class="panel setlist-panel">
     <header class="panel-head">

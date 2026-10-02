@@ -410,21 +410,69 @@
         const n = parseSongsCsv(reader.result, { resetSetlist: true });
         if (!n) {
           setImportStatus("CSV lido, mas nenhuma música válida foi encontrada. Confira as colunas.", true);
+          setWelcomeStatus("CSV lido, mas nenhuma música válida foi encontrada. Confira as colunas.", true);
           return;
         }
         setImportStatus(file.name + " importado — " + n + " música(s). Repertório reiniciado.");
+        hideWelcome();
       } catch (e) {
         setImportStatus("Erro ao ler o CSV: " + e.message, true);
+        setWelcomeStatus("Erro ao ler o CSV: " + e.message, true);
       }
       ev.target.value = ""; // allow re-selecting the same file later
     };
-    reader.onerror = function () { setImportStatus("Não foi possível ler o arquivo.", true); };
+    reader.onerror = function () {
+      setImportStatus("Não foi possível ler o arquivo.", true);
+      setWelcomeStatus("Não foi possível ler o arquivo.", true);
+    };
     reader.readAsText(file, "UTF-8");
   });
 
   document.getElementById("downloadSampleBtn").addEventListener("click", function () {
     downloadTextFile("modelo_musicas.csv", SAMPLE_CSV);
   });
+
+  // ============================================================
+  // Welcome screen
+  // ============================================================
+  function setWelcomeStatus(msg, isErr) {
+    const el = document.getElementById("welcomeStatus");
+    el.textContent = msg;
+    el.classList.toggle("err", !!isErr);
+  }
+  function hideWelcome() {
+    document.getElementById("welcomeScreen").classList.add("hidden");
+  }
+  document.getElementById("welcomeSampleBtn").addEventListener("click", function () {
+    if (songs.length) {
+      hideWelcome();
+      return;
+    }
+    setWelcomeStatus("Carregando exemplo...");
+    loadSongs().then(function () {
+      if (songs.length) { hideWelcome(); } else { setWelcomeStatus("Não foi possível carregar o exemplo.", true); }
+    });
+  });
+
+  // ============================================================
+  // View toggle (Repertório / Ambos / Banco)
+  // ============================================================
+  const VIEW_KEY = "repertorio-maker:view:v1";
+  function setView(view) {
+    document.getElementById("phone").dataset.view = view;
+    Array.prototype.forEach.call(document.querySelectorAll(".view-toggle button"), function (btn) {
+      btn.classList.toggle("active", btn.dataset.view === view);
+    });
+    try { localStorage.setItem(VIEW_KEY, view); } catch (e) { /* ignore */ }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".view-toggle button"), function (btn) {
+    btn.addEventListener("click", function () { setView(btn.dataset.view); });
+  });
+  (function restoreView() {
+    let v = "both";
+    try { v = localStorage.getItem(VIEW_KEY) || "both"; } catch (e) { /* ignore */ }
+    setView(v);
+  })();
 
   // ============================================================
   // Filters wiring

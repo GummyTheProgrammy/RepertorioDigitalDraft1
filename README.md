@@ -32,6 +32,10 @@ pelo Excel brasileiro (com BOM/acentos) também funcionam sem ajuste.
 
 ## Como usar
 
+- **Tela de início**: ao abrir o app, escolha um CSV (seletor de arquivo
+  nativo) ou toque em "Usar exemplo" para carregar o banco de dados padrão.
+- **Botões Repertório / Ambos / Banco** (barra no topo): alternam a tela
+  entre só o repertório, as duas metades (padrão) ou só o banco de músicas.
 - **Tela de cima — Repertório**: as músicas do seu setlist. Arraste
   (mouse ou dedo) para reordenar; o botão ✕ remove. Segurar ou passar o
   mouse por 1s mostra banda/afinação/quem começa/categoria/nacional.
