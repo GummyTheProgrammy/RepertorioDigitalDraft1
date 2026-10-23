@@ -1,41 +1,69 @@
-Nome,banda,afinação,quem começa,categoria,nacional/internacional
-Mercador de Almas,Jardins do Jack,,VS,Abertura,Nacional
-Breed,Nirvana,,Guitarra,Grunge,Internacional
-Outro Lugar,Jardins do Jack,,Virada Bateria,Pop Rock,Nacional
-Plush,Stone Temple Pilots,,Conta 4,Grunge,Internacional
-It's My Life,Bon Jovi,,VS,Rock,Internacional
-Fly Away,Lenny Kravitz,,Guitarra,Rock,Internacional
-Dani California,Red Hot Chili Peppers,,Bateria,Rock,Internacional
-Proibida Pra Mim,Molejo,,Conta 4,Pagode,Nacional
-Animal,Ira!,,Conta 4,Rock Nacional,Nacional
-Enter Sandman,Metallica,,Emenda,Metal,Internacional
-Song 2,Blur,,Emenda,Alternativo,Internacional
-Sex on Fire,Kings of Leon,,Emenda,Rock,Internacional
-Like a Stone,Audioslave,,Conta 4,Rock,Internacional
-Machinehead,Bush,,Guitarra,Alternativo,Internacional
-Alive,Pearl Jam,,Guitarra,Grunge,Internacional
-Jeremy,Pearl Jam,,Baixo,Grunge,Internacional
-Holiday,Green Day,,Guitarra,Pop Punk,Internacional
-Boulevard of Broken Dreams,Green Day,,Emenda,Pop Punk,Internacional
-Losing My Religion,R.E.M.,,Baixo,Alternativo,Internacional
-Vertigo,U2,,Bateria,Rock,Internacional
-Clube dos Canalhas,Matanza,,Conta 4,Rock Nacional,Nacional
-Quem Sabe,Skank,,Conta 4,Pop Rock,Nacional
-Papo Reto,Racionais MC's,,Conta 4,Rap Rock,Nacional
-Mulher de Fases,Raça Negra,,Guitarra,Pagode,Nacional
-Dias Atrás,Skank,,Conta 4,Pop Rock,Nacional
-Geração Coca-Cola,Legião Urbana,,Conta 4,Rock Nacional,Nacional
-Iris,Goo Goo Dolls,,Guitarra,Rock,Internacional
-Higher,Creed,,Guitarra,Post-Grunge,Internacional
-My Sacrifice,Creed,,Guitarra,Post-Grunge,Internacional
-Everlong,Foo Fighters,Drop D,Guitarra,Rock,Internacional
-Even Flow,Pearl Jam,Drop D,Conta 4,Grunge,Internacional
-Máscara (Sweet Dreams incidental),Casa das Máquinas,Drop C,Conta 4,Rock Nacional,Nacional
-Admirável Chip Novo,Pitty,Drop C#,Virada Bateria,Rock Nacional,Nacional
-Eu Quero Ver o Oco,O Rappa,Drop D,Baixo,Rock Nacional,Nacional
-Killing in the Name,Rage Against the Machine,Drop D,Conta 4,Rap Metal,Internacional
-Aerials,System of a Down,Drop C,Guitarra,Metal,Internacional
-Chop Suey,System of a Down,Drop C,Guitarra,Metal,Internacional
-Toxicity,System of a Down,Drop C,Guitarra,Metal,Internacional
-Fire,Ohio Players,Drop C#,VS,Funk,Internacional
-In the End,Linkin Park,Drop C#,VS,Nu Metal,Internacional
+Nome,banda,afinação,quem começa,categoria,nacional/internacional,Anotação Maurício,Anotação Flávio
+Mercador de almas,detonautas,,VS,ROCK,Nacional,,14 – 2 (DRIVE)
+Você me faz tão bem,detonautas,,baixo,ROCK,Nacional,,
+My Hero,foo fighters,,BATERIA,rock,Internacional,,
+do seu lado,jota quest,,CONTA 4,rock,Nacional,,
+Fly Away,lenny kravitz,,GUITARRA,rock,Internacional,,14 – 2 (DRIV)
+It's my life,bon jovi,,VS,rock,Internacional,"""b""",16 – 3 (DINTRO); 16 – 4 (DRIV)
+Animal,pearl jam,,CONTA 4,grunge,Internacional,,15 – 1 (CT-OptimaDrive)
+Enter Sandman,enter sandman,,EMENDA,metal,Internacional,,"15 – 1 (DRIV), 15 – 2 (CLEAN)"
+Song 2,blur,,EMENDA,grunge,Internacional,,"15 – 1 (DRIV), 15 – 3 (CLEAN)"
+Sex on fire,kings of leon,,EMENDA,rock,Internacional,,15 – 4 (CLN SUJO)
+Plush,stone temple pilots,,CONTA 4,grunge,Internacional,,
+Like a Stone,audioslave,,CONTA 4,grunge,Internacional,,
+IRIS,goo goo dolls,,guiTARRA,rock,Internacional,,
+Dani California,Red Hot Chili Peppers,,BATERIA,rock,Internacional,,
+Outro Lugar,detonautas,,VIRADA BATERIA,punk,Nacional,8e,"14 – 2 (DRIV) , 14 – 4 (CLEAN)"
+Vertigo,u2,,BATERIA,rock,Internacional,,
+Mulher de fases,raimundos,,GUITARRA,punk,Nacional,,14 – 2 (DRIVE)
+breed,nirvana,,GUITARRA,grunge,Internacional,,14 – 3 (FUZZ DRIVE)
+proibida pra mim,charlie brown jr,,conta 4,rock,Nacional,meio tom,"14 – 2 (DRIVE) , 14 – 4 (CLEAN)"
+papo reto,charlie brown jr,,conta 4,rock,Nacional,STD RIFF DIST,15 – 1 (DRIVE)
+quem sabe,los hermanos,,conta 4,punk,Nacional,meio tom,"15 – 4 (CLEAN SUJO), 15 – 1 (DRIVE)"
+anna julia,los hermanos,,GUITARRA,rock,Nacional,meio tom,"15 – 4 (CLEAN SUJO), 15 – 1 (DRIV)"
+fátima,capital inicial,,,rock,Nacional,,
+carla,ls jack,,,rock,Nacional,,15 – 4 (CLEAN SUJO)
+que país é esse,legião urbana,,,rock,Nacional,,"15 – 1 (SOLO) , 15 – 1 (DRIV)"
+geração coca cola,legião urbana,,,punk,Nacional,,15 – 1 (DRIV)
+SERÁ,legião urbana,,,rock,Nacional,,"14 – 1-1 (SOLO), 14 – 1 (DRIV BASE)"
+CLUBE DOS CANALHAS,matanza,,,metal,Nacional,,15 – 1 (DRIVE)
+SÓ POR HOJE,detonautas,,,rock,Nacional,to trancado,14 – 1 (GRAVITY GRAINS)
+American Idiot,green day,,GUITARRA,punk,Internacional,,
+HOLIDAY,green day,,GUITARRA,punk,Internacional,,
+BOULEVARD of broken dreams,green day,,emenda,punk,Internacional,,
+BASKET CASE,green day,,voz + guitarra,punk,Internacional,,
+SHE,green day,,baixo,punk,Internacional,,
+UM MIN. FIM MUNDO,cpm22,,baixo,punk,Nacional,,"15 – 3(CL), 15 – 4(S), 15 –1(D)"
+DIAS ATRÁS,cpm22,,conta 4,punk,Nacional,,"15 – 1(SOLO) , 15 – 4 (CLN), 15 – 1 (DRV)"
+ALIVE,pearl jam,,GUITARRA,grunge,Internacional,,"14 – 4 (CLEAN), 14 – 1 (DRIVE)"
+Once,pearl jam,,,grunge,Internacional,,
+I am mine,pearl jam,,,grunge,Internacional,,
+state of love and trust,pearl jam,,,grunge,Internacional,,
+SPIN THE BLACK CIRCLE,pearl jam,,GUITARRA,grunge,Internacional,,
+JEREMY,pearl jam,,baixo,grunge,Internacional,,"15 – 4 (SOLO HARM), 15 – 4, 15 – 1 (DRIV)"
+SIRENS,pearl jam,,conta 4,grunge,Internacional,slide,"15 – 3 (CLN), 15 – 4(CLN SUJO)"
+GIVEN TO FLY,pearl jam,,conta 4,grunge,Internacional,,
+BETTER MAN,pearl jam,,GUITARRA,grunge,Internacional,,
+DO THE EVOLUTION,pearl jam,,GUITARRA,grunge,Internacional,,21 – 2 (CRUNCH)
+ELDERLY WOMAN,pearl jam,,,grunge,Internacional,,
+WHY GO,pearl jam,,,grunge,Internacional,,
+DAUGHTER,pearl jam,,,grunge,Internacional,,
+PORCH,pearl jam,,,grunge,Internacional,,14 – 1 (GRAVITY GAINS)
+LAST KISS,pearl jam,,,grunge,Internacional,,14 – 4 (CLEAN)
+YELLOW LEDBETTER,pearl jam,,,grunge,Internacional,,
+BLACK,pearl jam,,,grunge,Internacional,,"15 – 3 (CLEAN), 15 – 4 (CLEAN SUJO)"
+COURDUROY,pearl jam,,,grunge,Internacional,,21 – 2 (CRUNCH)
+EVEN FLOW,pearl jam,DROP D,CONTA 4,grunge,Internacional,,14 – 2 (DRIV)
+Everlong,foo fighters,DROP D,GUITARRA,grunge,Internacional,,18 – 3 (DRIVE FOO EVLNG 2)
+my sacrifice,creed,DROP D,,grunge,Internacional,,"14 – 4 (CLEAN), 14 –1(DRV)"
+higher,creed,DROP D,,grunge,Internacional,,
+Máscara (Sweet Dreams incidental),pitty,DROP C,CONTA 4,metal,Nacional,,
+Admiravel Chip Novo,pitty,DROP C#,VIRADA BATERIA,metal,Nacional,,"20 – 1 (DRIVE), 20 – 2 CLN"
+Eu quero ver o oco,raimundos,DROP D,BAIXO,metal,Nacional,,
+killing in the name,ratm,drop d,conta 4,metal,Internacional,,14 – 2 (DRIV)
+take a look around,limp bizkit,drop c,guitarra,metal,Internacional,,
+aerials,soad,drop c,,metal,Internacional,,17 – 4 (DRIVE TOXICITY)
+Toxicity,soad,DROP C,GUITARRA,metal,Internacional,,17 – 4 (DRIVE TOXICITY)
+Fire,autoral,DROP C#,VS,metal,Internacional,,17 – 1 (DRIVE DROP C#)
+In The End,linkin park,DROP C#,VS,metal,Internacional,,17 – 1 (DRIVE C#)
+numb,linkin park,drop c,VS,metal,Internacional,,17 – 4 (DRIVE TOXICITY)

@@ -1,86 +1,216 @@
 (function () {
   "use strict";
 
+  var api = window.RepertorioAPI;
+
   // ============================================================
   // State
   // ============================================================
-  let songs = [];          // full database, each: {id, nome, banda, afinacao, quemComeca, categoria, nacional}
-  let songsById = {};
-  let setlist = [];        // array of song ids, in order
-  let filters = { afinacao: "", categoria: "", nacional: "" };
+  var currentUser = null;
+  var currentBand = null;
+  var currentRep = null;
+  var songs = [];          // banco da banda atual: {id, nome, banda, afinacao, quemComeca, categoria, nacional}
+  var songsById = {};
+  var setlist = [];        // ids em ordem
+  var filters = { afinacao: "", categoria: "", nacional: "" };
+  var titleEdited = false;
 
-  const HOLD_MS = 1000;
-  const MOVE_THRESHOLD = 8; // px — beyond this we treat a touch as a drag, not a hold
+  var HOLD_MS = 1000;
+  var MOVE_THRESHOLD = 8; // px — acima disso é arrasto, não "segurar"
 
   // ============================================================
   // Helpers
   // ============================================================
+  function $(id) { return document.getElementById(id); }
   function stripAccents(s) {
-    return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "");
   }
   function normalizeHeader(h) {
     return stripAccents(String(h || "").trim().toLowerCase()).replace(/[^a-z0-9]/g, "");
   }
-  function slug(s) {
-    return stripAccents(String(s || "")).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-  }
   function escapeHtml(s) {
-    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
   function uniqueSorted(arr) {
     return Array.from(new Set(arr.filter(Boolean))).sort(function (a, b) { return a.localeCompare(b, "pt-BR"); });
   }
+  function errMsg(e) { return (e && e.message) || "Erro inesperado."; }
+  function setStatus(id, msg, isErr) {
+    var el = $(id);
+    el.textContent = msg || "";
+    el.classList.toggle("err", !!isErr);
+  }
+  function each(sel, fn) { Array.prototype.forEach.call(document.querySelectorAll(sel), fn); }
 
   // ============================================================
-  // CSV loading
+  // Navegação entre telas
   // ============================================================
-  function loadSongs() {
-    return fetch("data/musicas.csv", { cache: "no-store" })
-      .then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.text();
-      })
-      .then(parseSongsCsv)
-      .catch(function (err) {
-        console.error("Falha ao carregar data/musicas.csv:", err);
-        document.getElementById("bankList").innerHTML =
-          '<p class="empty-hint">Não foi possível carregar data/musicas.csv. Confira se o arquivo existe e se o site está sendo servido por http(s).</p>';
-      });
+  var SCREENS = ["screenAuth", "screenBands", "screenReps", "screenEditor"];
+  function showScreen(name) {
+    SCREENS.forEach(function (id) { $(id).classList.toggle("hidden", id !== name); });
+    hidePopup();
   }
 
-  function parseSongsCsv(text, opts) {
-    opts = opts || {};
-    const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, transformHeader: normalizeHeader });
-    const rows = parsed.data || [];
-    songs = rows.map(function (row, i) {
-      const nome = String(row["nome"] || "").trim();
-      const banda = String(row["banda"] || "").trim();
-      const afinacao = String(row["afinacao"] || "").trim();
-      const quemComeca = String(row["quemcomeca"] || "").trim();
-      const categoria = String(row["categoria"] || "").trim();
-      const nacional = String(row["nacionalinternacional"] || "").trim();
-      const id = slug(nome) + "-" + slug(banda) + "-" + i;
-      return { id: id, nome: nome, banda: banda, afinacao: afinacao, quemComeca: quemComeca, categoria: categoria, nacional: nacional };
-    }).filter(function (s) { return s.nome; });
+  // ============================================================
+  // Login / cadastro
+  // ============================================================
+  function resetAuthTab() {
+    each(".auth-tab", function (t) { t.classList.toggle("active", t.dataset.tab === "login"); });
+    $("loginForm").classList.remove("hidden");
+    $("registerForm").classList.add("hidden");
+    setStatus("authStatus", "");
+  }
+  each(".auth-tab", function (tab) {
+    tab.addEventListener("click", function () {
+      each(".auth-tab", function (t) { t.classList.toggle("active", t === tab); });
+      $("loginForm").classList.toggle("hidden", tab.dataset.tab !== "login");
+      $("registerForm").classList.toggle("hidden", tab.dataset.tab !== "register");
+      setStatus("authStatus", "");
+    });
+  });
+  $("loginForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    setStatus("authStatus", "Entrando...");
+    api.auth.login({ email: $("loginEmail").value, password: $("loginPassword").value })
+      .then(function (u) { $("loginForm").reset(); enterBandsScreen(u); })
+      .catch(function (e) { setStatus("authStatus", errMsg(e), true); });
+  });
+  $("registerForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    setStatus("authStatus", "Criando conta...");
+    api.auth.register({ name: $("registerName").value, email: $("registerEmail").value, password: $("registerPassword").value })
+      .then(function (u) { $("registerForm").reset(); enterBandsScreen(u); })
+      .catch(function (e) { setStatus("authStatus", errMsg(e), true); });
+  });
+  $("logoutBtn").addEventListener("click", function () {
+    api.auth.logout().then(function () {
+      currentUser = null; currentBand = null; currentRep = null;
+      songs = []; songsById = {}; setlist = [];
+      $("bandsList").innerHTML = ""; $("repsList").innerHTML = "";
+      $("setlistList").innerHTML = ""; $("bankList").innerHTML = "";
+      resetAuthTab();
+      showScreen("screenAuth");
+    });
+  });
 
-    songsById = {};
-    songs.forEach(function (s) { songsById[s.id] = s; });
+  // ============================================================
+  // Bandas
+  // ============================================================
+  function enterBandsScreen(user) {
+    if (user) currentUser = user;
+    $("bandsHello").textContent = "Olá, " + (currentUser ? currentUser.name.split(" ")[0] : "") + " 👋";
+    setStatus("bandsStatus", "");
+    $("bandsList").innerHTML = "";
+    showScreen("screenBands");
+    return renderBandsList();
+  }
+  function renderBandsList() {
+    return api.bands.list().then(function (list) {
+      var box = $("bandsList");
+      if (!list.length) {
+        box.innerHTML = '<p class="empty-hint">Você ainda não tem bandas. Crie a primeira abaixo.</p>';
+        return;
+      }
+      box.innerHTML = list.map(function (b) {
+        return '<div class="pick-row" data-id="' + escapeHtml(b.id) + '">' +
+          '<button type="button" class="pick-main">' + escapeHtml(b.name) + '</button>' +
+          '<button type="button" class="pick-del" aria-label="Excluir banda">✕</button></div>';
+      }).join("");
+      each("#bandsList .pick-row", function (row) {
+        var b = list.filter(function (x) { return x.id === row.dataset.id; })[0];
+        row.querySelector(".pick-main").addEventListener("click", function () { selectBand(b); });
+        row.querySelector(".pick-del").addEventListener("click", function () {
+          if (!confirm('Excluir a banda "' + b.name + '" com todas as músicas e repertórios?')) return;
+          api.bands.remove(b.id).then(renderBandsList).catch(function (e) { setStatus("bandsStatus", errMsg(e), true); });
+        });
+      });
+    }).catch(function (e) { setStatus("bandsStatus", errMsg(e), true); });
+  }
+  $("newBandForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    api.bands.create({ name: $("newBandName").value })
+      .then(function () { $("newBandForm").reset(); setStatus("bandsStatus", ""); return renderBandsList(); })
+      .catch(function (e) { setStatus("bandsStatus", errMsg(e), true); });
+  });
 
-    populateFilterOptions();
+  // ============================================================
+  // Repertórios
+  // ============================================================
+  function selectBand(band) {
+    currentBand = band; currentRep = null;
+    $("repsBandName").textContent = band.name;
+    setStatus("repsStatus", "");
+    $("repsList").innerHTML = "";
+    showScreen("screenReps");
+    return renderRepsList();
+  }
+  function renderRepsList() {
+    return api.repertoires.list(currentBand.id).then(function (list) {
+      var box = $("repsList");
+      if (!list.length) {
+        box.innerHTML = '<p class="empty-hint">Nenhum repertório ainda. Crie o primeiro abaixo (ex.: "Primeiro Set").</p>';
+        return;
+      }
+      box.innerHTML = list.map(function (r) {
+        return '<div class="pick-row" data-id="' + escapeHtml(r.id) + '">' +
+          '<button type="button" class="pick-main">' + escapeHtml(r.titulo) +
+          '<span class="pick-sub">' + r.songIds.length + (r.songIds.length === 1 ? " música" : " músicas") + '</span></button>' +
+          '<button type="button" class="pick-del" aria-label="Excluir repertório">✕</button></div>';
+      }).join("");
+      each("#repsList .pick-row", function (row) {
+        var r = list.filter(function (x) { return x.id === row.dataset.id; })[0];
+        row.querySelector(".pick-main").addEventListener("click", function () { selectRepertoire(r); });
+        row.querySelector(".pick-del").addEventListener("click", function () {
+          if (!confirm('Excluir o repertório "' + r.titulo + '"?')) return;
+          api.repertoires.remove(r.id).then(renderRepsList).catch(function (e) { setStatus("repsStatus", errMsg(e), true); });
+        });
+      });
+    }).catch(function (e) { setStatus("repsStatus", errMsg(e), true); });
+  }
+  $("newRepForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    api.repertoires.create(currentBand.id, $("newRepName").value)
+      .then(function (r) { $("newRepForm").reset(); setStatus("repsStatus", ""); return selectRepertoire(r); })
+      .catch(function (e) { setStatus("repsStatus", errMsg(e), true); });
+  });
+  $("backToBandsBtn").addEventListener("click", function () { enterBandsScreen(); });
+  $("backToRepsBtn").addEventListener("click", function () { selectBand(currentBand); });
+
+  // ============================================================
+  // Editor: carrega banco + repertório
+  // ============================================================
+  function selectRepertoire(rep) {
+    currentRep = rep;
+    titleEdited = false;
+    $("editorTitle").textContent = currentBand.name + " · " + rep.titulo;
+    $("tituloInput").value = currentBand.name + " - " + rep.titulo;
+    setStatus("importStatus", "");
     filters = { afinacao: "", categoria: "", nacional: "" };
-    document.getElementById("filterAfinacao").value = "";
-    document.getElementById("filterCategoria").value = "";
-    document.getElementById("filterNacional").value = "";
+    showScreen("screenEditor");
+    return loadBank().then(function () {
+      return api.repertoires.get(rep.id);
+    }).then(function (fresh) {
+      currentRep = fresh;
+      setlist = fresh.songIds.filter(function (id) { return songsById[id]; });
+      renderSetlist();
+      renderBank();
+    }).catch(function (e) { setStatus("importStatus", errMsg(e), true); });
+  }
+  $("tituloInput").addEventListener("input", function () { titleEdited = true; });
 
-    if (opts.resetSetlist) {
-      setlist = [];
-      saveSetlistToStorage();
-    } else {
-      restoreSetlistFromStorage();
-    }
-    renderBank();
-    renderSetlist();
-    return songs.length;
+  function loadBank() {
+    return api.songs.list(currentBand.id).then(function (list) {
+      songs = list.map(function (s) {
+        s.banda = s.bandaOriginal;
+        return s;
+      }).sort(function (a, b) { return a.nome.localeCompare(b.nome, "pt-BR"); });
+      songsById = {};
+      songs.forEach(function (s) { songsById[s.id] = s; });
+      populateFilterOptions();
+      $("filterAfinacao").value = filters.afinacao;
+      $("filterCategoria").value = filters.categoria;
+      $("filterNacional").value = filters.nacional;
+    });
   }
 
   function populateFilterOptions() {
@@ -89,29 +219,20 @@
     fillSelect("filterNacional", uniqueSorted(songs.map(function (s) { return s.nacional; })), "Nac./Int.: todos");
   }
   function fillSelect(id, values, placeholder) {
-    const el = document.getElementById(id);
-    el.innerHTML = '<option value="">' + escapeHtml(placeholder) + "</option>" +
+    $(id).innerHTML = '<option value="">' + escapeHtml(placeholder) + "</option>" +
       values.map(function (v) { return '<option value="' + escapeHtml(v) + '">' + escapeHtml(v) + "</option>"; }).join("");
   }
 
-  // ============================================================
-  // localStorage persistence (setlist survives a reload)
-  // ============================================================
-  const STORAGE_KEY = "repertorio-maker:setlist:v1";
+  // Salva a ordem do setlist na "API" (fire-and-forget; o estado local manda na tela)
   function saveSetlistToStorage() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(setlist)); } catch (e) { /* ignore */ }
-  }
-  function restoreSetlistFromStorage() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const ids = JSON.parse(raw);
-      if (Array.isArray(ids)) setlist = ids.filter(function (id) { return songsById[id]; });
-    } catch (e) { /* ignore */ }
+    if (!currentRep) return;
+    api.repertoires.setSongIds(currentRep.id, setlist.slice()).catch(function (e) {
+      setStatus("importStatus", "Falha ao salvar: " + errMsg(e), true);
+    });
   }
 
   // ============================================================
-  // Bank (song database) rendering + filters + add-to-setlist
+  // Banco (lista + filtros + adicionar ao setlist)
   // ============================================================
   function filteredSongs() {
     return songs.filter(function (s) {
@@ -123,19 +244,25 @@
   }
 
   function renderBank() {
-    const list = filteredSongs();
-    const container = document.getElementById("bankList");
-    document.getElementById("bankCount").textContent = list.length + (list.length === 1 ? " música" : " músicas");
+    var list = filteredSongs();
+    var container = $("bankList");
+    $("bankCount").textContent = list.length + (list.length === 1 ? " música" : " músicas");
 
+    if (!songs.length) {
+      container.innerHTML = '<p class="empty-hint">O banco desta banda está vazio.<br>Crie uma música (➕ Nova), importe um CSV ou comece com o exemplo.<br>' +
+        '<button type="button" class="mini-btn" id="loadExampleBtn">✨ Carregar exemplo</button></p>';
+      $("loadExampleBtn").addEventListener("click", loadExampleSongs);
+      return;
+    }
     if (!list.length) {
       container.innerHTML = '<p class="empty-hint">Nenhuma música encontrada com esses filtros.</p>';
       return;
     }
 
     container.innerHTML = list.map(function (s) {
-      const already = setlist.indexOf(s.id) !== -1;
+      var already = setlist.indexOf(s.id) !== -1;
       return (
-        '<div class="bank-row' + (already ? " added" : "") + '" data-id="' + s.id + '">' +
+        '<div class="bank-row' + (already ? " added" : "") + '" data-id="' + escapeHtml(s.id) + '">' +
         '<span class="bank-name">' + escapeHtml(s.nome) + "</span>" +
         (s.banda ? '<span class="bank-band">' + escapeHtml(s.banda) + "</span>" : "") +
         '<span class="add-mark">' + (already ? "✓" : "+") + "</span>" +
@@ -143,7 +270,7 @@
       );
     }).join("");
 
-    Array.prototype.forEach.call(container.querySelectorAll(".bank-row"), function (row) {
+    each("#bankList .bank-row", function (row) {
       wireHoldAndTap(row, {
         onTap: function () { addToSetlist(row.dataset.id); },
         getSong: function () { return songsById[row.dataset.id]; }
@@ -152,15 +279,14 @@
   }
 
   function addToSetlist(id) {
-    if (!songsById[id]) return;
-    if (setlist.indexOf(id) !== -1) return; // already there
+    if (!songsById[id] || setlist.indexOf(id) !== -1) return;
     setlist.push(id);
     saveSetlistToStorage();
     renderSetlist();
     renderBank();
   }
   function removeFromSetlist(id) {
-    const idx = setlist.indexOf(id);
+    var idx = setlist.indexOf(id);
     if (idx === -1) return;
     setlist.splice(idx, 1);
     saveSetlistToStorage();
@@ -169,22 +295,22 @@
   }
 
   // ============================================================
-  // Setlist rendering + drag to reorder
+  // Setlist (arrastável)
   // ============================================================
   function renderSetlist() {
-    const container = document.getElementById("setlistList");
-    document.getElementById("setlistCount").textContent = setlist.length + (setlist.length === 1 ? " música" : " músicas");
+    var container = $("setlistList");
+    $("setlistCount").textContent = setlist.length + (setlist.length === 1 ? " música" : " músicas");
 
     if (!setlist.length) {
-      container.innerHTML = '<p class="empty-hint" id="setlistEmptyHint">Toque numa música da lista abaixo para adicionar aqui.</p>';
+      container.innerHTML = '<p class="empty-hint">Toque numa música do banco abaixo para adicionar aqui.</p>';
       return;
     }
 
     container.innerHTML = setlist.map(function (id, i) {
-      const s = songsById[id];
+      var s = songsById[id];
       if (!s) return "";
       return (
-        '<div class="set-row" data-id="' + id + '">' +
+        '<div class="set-row" data-id="' + escapeHtml(id) + '">' +
         '<span class="drag-dots">⠿</span>' +
         '<span class="set-index">' + (i + 1) + "</span>" +
         '<span class="set-name">' + escapeHtml(s.nome) + "</span>" +
@@ -193,13 +319,13 @@
       );
     }).join("");
 
-    Array.prototype.forEach.call(container.querySelectorAll(".set-row"), function (row) {
+    each("#setlistList .set-row", function (row) {
       row.querySelector(".remove-btn").addEventListener("click", function (ev) {
         ev.stopPropagation();
         removeFromSetlist(row.dataset.id);
       });
       wireHoldAndTap(row, {
-        onTap: null, // tapping a setlist row does nothing (removal is via the X button)
+        onTap: null,
         getSong: function () { return songsById[row.dataset.id]; },
         dragContainer: container
       });
@@ -354,6 +480,10 @@
     document.getElementById("popQuem").textContent = song.quemComeca || "—";
     document.getElementById("popCategoria").textContent = song.categoria || "—";
     document.getElementById("popNacional").textContent = song.nacional || "—";
+    document.getElementById("popAnotMauricio").textContent = song.anotacaoMauricio || "—";
+    document.getElementById("popAnotFlavio").textContent = song.anotacaoFlavio || "—";
+    document.getElementById("popRowMauricio").style.display = song.anotacaoMauricio ? "" : "none";
+    document.getElementById("popRowFlavio").style.display = song.anotacaoFlavio ? "" : "none";
 
     const rect = anchorEl.getBoundingClientRect();
     popup.classList.add("visible");
@@ -370,131 +500,159 @@
   }
 
   // ============================================================
-  // Manual CSV import + sample CSV download
+  // Nova música (modal)
   // ============================================================
-  const SAMPLE_CSV =
-    "Nome,banda,afinação,quem começa,categoria,nacional/internacional\n" +
-    "Mercador de Almas,Jardins do Jack,,VS,Abertura,Nacional\n" +
-    "Breed,Nirvana,,Guitarra,Grunge,Internacional\n" +
-    "Plush,Stone Temple Pilots,,Conta 4,Grunge,Internacional\n" +
-    "Enter Sandman,Metallica,,Emenda,Metal,Internacional\n" +
-    "Everlong,Foo Fighters,Drop D,Guitarra,Rock,Internacional\n" +
-    "Even Flow,Pearl Jam,Drop D,Conta 4,Grunge,Internacional\n" +
-    "Máscara (Sweet Dreams incidental),Casa das Máquinas,Drop C,Conta 4,Rock Nacional,Nacional\n" +
-    "Chop Suey,System of a Down,Drop C,Guitarra,Metal,Internacional\n";
-
-  function setImportStatus(msg, isErr) {
-    const el = document.getElementById("importStatus");
-    el.textContent = msg;
-    el.classList.toggle("err", !!isErr);
+  function openSongModal() {
+    $("songForm").reset();
+    setStatus("songStatus", "");
+    $("songModalOverlay").classList.remove("hidden");
+    setTimeout(function () { $("songNome").focus(); }, 30);
   }
+  function closeSongModal() { $("songModalOverlay").classList.add("hidden"); }
+  $("newSongBtn").addEventListener("click", openSongModal);
+  $("songCancelBtn").addEventListener("click", closeSongModal);
+  $("songModalOverlay").addEventListener("click", function (ev) {
+    if (ev.target === $("songModalOverlay")) closeSongModal();
+  });
+  $("songForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    api.songs.create(currentBand.id, {
+      nome: $("songNome").value,
+      bandaOriginal: $("songBanda").value,
+      afinacao: $("songAfinacao").value,
+      quemComeca: $("songQuemComeca").value,
+      categoria: $("songCategoria").value,
+      nacional: $("songNacional").value,
+      anotacaoMauricio: $("songAnotMauricio").value,
+      anotacaoFlavio: $("songAnotFlavio").value
+    }).then(function (s) {
+      closeSongModal();
+      return loadBank().then(function () {
+        renderBank();
+        setStatus("importStatus", '"' + s.nome + '" criada. Toque nela para adicionar ao repertório.');
+      });
+    }).catch(function (e) { setStatus("songStatus", errMsg(e), true); });
+  });
+
+  // ============================================================
+  // Importar CSV + CSV de exemplo
+  // ============================================================
+  var SAMPLE_CSV =
+    "Nome,banda,afinação,quem começa,categoria,nacional/internacional,Anotação Maurício,Anotação Flávio\n" +
+    "Mercador de Almas,Detonautas,,VS,Rock,Nacional,,14 – 2 (DRIVE)\n" +
+    "Breed,Nirvana,,Guitarra,Grunge,Internacional,,14 – 3 (FUZZ DRIVE)\n" +
+    "Plush,Stone Temple Pilots,,Conta 4,Grunge,Internacional,,\n" +
+    "Even Flow,Pearl Jam,Drop D,Conta 4,Grunge,Internacional,,14 – 2 (DRIV)\n" +
+    "Everlong,Foo Fighters,Drop D,Guitarra,Grunge,Internacional,,18 – 3 (DRIVE)\n" +
+    "Outro Lugar,Detonautas,,Virada bateria,Punk,Nacional,8e,14 – 2 (DRIV)\n" +
+    "Chop Suey,System of a Down,Drop C,Guitarra,Metal,Internacional,,\n";
 
   function downloadTextFile(filename, text, mime) {
-    const blob = new Blob([text], { type: mime || "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    var blob = new Blob(["﻿" + text], { type: mime || "text/csv;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
   }
 
-  document.getElementById("csvInput").addEventListener("change", function (ev) {
-    const file = ev.target.files[0];
+  // Lê o CSV com cabeçalho tolerante (ver js/csv-schema.js). Devolve {rows, info}.
+  function csvTextToRows(text) {
+    var parsed = Papa.parse(text.replace(/^\ufeff/, ""), { header: false, skipEmptyLines: true });
+    var res = window.CsvSchema.parseRows(parsed.data || []);
+    return { rows: res.songs, info: res.info, headers: (parsed.data && parsed.data[0]) || [] };
+  }
+
+  function importCsvText(text, label) {
+    var parsed = csvTextToRows(text), rows = parsed.rows;
+    if (!rows.length) {
+      var why = parsed.info.map && Object.keys(parsed.info.map).some(function (k) { return parsed.info.map[k] === "nome"; })
+        ? "nenhuma música válida foi encontrada."
+        : 'não achei a coluna "Nome". Colunas lidas: ' + parsed.headers.join(", ") + ".";
+      setStatus("importStatus", "CSV lido, mas " + why, true);
+      return Promise.resolve();
+    }
+    return api.songs.importCsv(currentBand.id, rows).then(function (res) {
+      return loadBank().then(function () {
+        renderBank();
+        var msg = label + ": " + res.created + " nova(s), " + res.updated + " atualizada(s).";
+        if (parsed.info.unknown.length) msg += " Colunas ignoradas: " + parsed.info.unknown.join(", ") + ".";
+        setStatus("importStatus", msg);
+      });
+    }).catch(function (e) { setStatus("importStatus", "Erro ao importar: " + errMsg(e), true); });
+  }
+
+  $("csvInput").addEventListener("change", function (ev) {
+    var file = ev.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function () {
-      try {
-        const n = parseSongsCsv(reader.result, { resetSetlist: true });
-        if (!n) {
-          setImportStatus("CSV lido, mas nenhuma música válida foi encontrada. Confira as colunas.", true);
-          setWelcomeStatus("CSV lido, mas nenhuma música válida foi encontrada. Confira as colunas.", true);
-          return;
-        }
-        setImportStatus(file.name + " importado — " + n + " música(s). Repertório reiniciado.");
-        hideWelcome();
-      } catch (e) {
-        setImportStatus("Erro ao ler o CSV: " + e.message, true);
-        setWelcomeStatus("Erro ao ler o CSV: " + e.message, true);
-      }
-      ev.target.value = ""; // allow re-selecting the same file later
-    };
-    reader.onerror = function () {
-      setImportStatus("Não foi possível ler o arquivo.", true);
-      setWelcomeStatus("Não foi possível ler o arquivo.", true);
-    };
+    var input = ev.target;
+    var reader = new FileReader();
+    reader.onload = function () { importCsvText(String(reader.result), file.name); input.value = ""; };
+    reader.onerror = function () { setStatus("importStatus", "Não foi possível ler o arquivo.", true); };
     reader.readAsText(file, "UTF-8");
   });
-
-  document.getElementById("downloadSampleBtn").addEventListener("click", function () {
+  $("downloadSampleBtn").addEventListener("click", function () {
     downloadTextFile("modelo_musicas.csv", SAMPLE_CSV);
   });
+  function loadExampleSongs() {
+    setStatus("importStatus", "Carregando exemplo...");
+    fetch("data/musicas.csv", { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
+      .then(function (t) { return importCsvText(t, "Exemplo"); })
+      .catch(function (e) { setStatus("importStatus", "Não foi possível carregar data/musicas.csv (" + errMsg(e) + "). Use um servidor http(s).", true); });
+  }
 
   // ============================================================
-  // Welcome screen
+  // Botões de visão (Repertório / Ambos / Banco)
   // ============================================================
-  function setWelcomeStatus(msg, isErr) {
-    const el = document.getElementById("welcomeStatus");
-    el.textContent = msg;
-    el.classList.toggle("err", !!isErr);
-  }
-  function hideWelcome() {
-    document.getElementById("welcomeScreen").classList.add("hidden");
-  }
-  document.getElementById("welcomeSampleBtn").addEventListener("click", function () {
-    if (songs.length) {
-      hideWelcome();
-      return;
-    }
-    setWelcomeStatus("Carregando exemplo...");
-    loadSongs().then(function () {
-      if (songs.length) { hideWelcome(); } else { setWelcomeStatus("Não foi possível carregar o exemplo.", true); }
-    });
-  });
-
-  // ============================================================
-  // View toggle (Repertório / Ambos / Banco)
-  // ============================================================
-  const VIEW_KEY = "repertorio-maker:view:v1";
+  var VIEW_KEY = "repertorio-digital:view:v1";
   function setView(view) {
-    document.getElementById("phone").dataset.view = view;
-    Array.prototype.forEach.call(document.querySelectorAll(".view-toggle button"), function (btn) {
-      btn.classList.toggle("active", btn.dataset.view === view);
-    });
+    $("phone").dataset.view = view;
+    each(".view-toggle button", function (btn) { btn.classList.toggle("active", btn.dataset.view === view); });
     try { localStorage.setItem(VIEW_KEY, view); } catch (e) { /* ignore */ }
   }
-  Array.prototype.forEach.call(document.querySelectorAll(".view-toggle button"), function (btn) {
+  each(".view-toggle button", function (btn) {
     btn.addEventListener("click", function () { setView(btn.dataset.view); });
   });
   (function restoreView() {
-    let v = "both";
+    var v = "both";
     try { v = localStorage.getItem(VIEW_KEY) || "both"; } catch (e) { /* ignore */ }
     setView(v);
   })();
 
   // ============================================================
-  // Filters wiring
+  // Modalidade de impressão (Padrão / Anotações Maurício / Anotações Flávio)
   // ============================================================
-  document.getElementById("filterAfinacao").addEventListener("change", function (ev) {
-    filters.afinacao = ev.target.value; renderBank();
+  var MODE_KEY = "repertorio-digital:printMode:v1";
+  try { var m = localStorage.getItem(MODE_KEY); if (m && PRINT_MODES_VALUES().indexOf(m) !== -1) $("printMode").value = m; } catch (e) { /* ignore */ }
+  function PRINT_MODES_VALUES() { return ["padrao", "mauricio", "flavio"]; }
+  $("printMode").addEventListener("change", function () {
+    try { localStorage.setItem(MODE_KEY, $("printMode").value); } catch (e) { /* ignore */ }
   });
-  document.getElementById("filterCategoria").addEventListener("change", function (ev) {
-    filters.categoria = ev.target.value; renderBank();
-  });
-  document.getElementById("filterNacional").addEventListener("change", function (ev) {
-    filters.nacional = ev.target.value; renderBank();
-  });
+
+  // ============================================================
+  // Filtros
+  // ============================================================
+  $("filterAfinacao").addEventListener("change", function (ev) { filters.afinacao = ev.target.value; renderBank(); });
+  $("filterCategoria").addEventListener("change", function (ev) { filters.categoria = ev.target.value; renderBank(); });
+  $("filterNacional").addEventListener("change", function (ev) { filters.nacional = ev.target.value; renderBank(); });
 
   // ============================================================
   // Print / PDF — same visual spec as the Repertório Maker PDF
   // ============================================================
   const MM_TO_PX = 96 / 25.4;
   const TABLE_W_MM = 210 * 0.92;
-  const COMENT_COL_W_MM = 74;
   const GAP_MM = 4;
-  const NAME_COL_W_MM = TABLE_W_MM - COMENT_COL_W_MM - GAP_MM;
+  const COMENT_COL_STD_MM = 74;   // modalidade padrão
+  const COMENT_COL_NOTES_MM = 104; // com anotações a coluna da direita precisa de mais espaço
+  let COMENT_COL_W_MM = COMENT_COL_STD_MM;
+  let NAME_COL_W_MM = TABLE_W_MM - COMENT_COL_W_MM - GAP_MM;
+  const PRINT_MODES = {
+    padrao: { field: null },
+    mauricio: { field: "anotacaoMauricio" },
+    flavio: { field: "anotacaoFlavio" }
+  };
+  function currentPrintMode() { return PRINT_MODES[document.getElementById("printMode").value] || PRINT_MODES.padrao; }
   const NAME_MAX_MM = 40;
   const COMENT_MAX_MM = 36;
   const NAME_LS_MM = 0.35;
@@ -511,7 +669,8 @@
     '<circle cx="250" cy="20" r="4"/><circle cx="270" cy="20" r="4"/><circle cx="290" cy="20" r="4"/></g></svg>';
 
   function buildComent(s) {
-    return [s.afinacao, s.quemComeca].filter(Boolean).map(function (x) { return x.toUpperCase(); }).join(" | ");
+    var note = currentPrintMode().field ? s[currentPrintMode().field] : "";
+    return [s.afinacao, s.quemComeca, note].filter(Boolean).map(function (x) { return x.toUpperCase(); }).join(" | ");
   }
 
   function printRowHtml(n, s) {
@@ -529,6 +688,9 @@
   }
 
   function buildPrintSheets() {
+    const mode = currentPrintMode();
+    COMENT_COL_W_MM = mode.field ? COMENT_COL_NOTES_MM : COMENT_COL_STD_MM;
+    NAME_COL_W_MM = TABLE_W_MM - COMENT_COL_W_MM - GAP_MM;
     const titulo = document.getElementById("tituloInput").value;
     const { main, sub } = splitTitle(titulo);
     const list = setlist.map(function (id) { return songsById[id]; }).filter(Boolean);
@@ -557,6 +719,21 @@
   function fitPrintSheets() {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
+
+    // Com anotações, a coluna da direita se ajusta ao conteúdo real:
+    // largura necessária da maior anotação numa fonte de 9mm, entre o padrão e o máximo.
+    if (currentPrintMode().field) {
+      let need = 0;
+      document.querySelectorAll("#printRoot .p-coment").forEach(function (el) {
+        const t = el.dataset.text;
+        if (!t) return;
+        ctx.font = (9 * MM_TO_PX) + "px 'Bebas Neue'";
+        const w = ctx.measureText(t).width / MM_TO_PX + COMENT_LS_MM * (t.length - 1);
+        need = Math.max(need, w);
+      });
+      COMENT_COL_W_MM = Math.min(COMENT_COL_NOTES_MM, Math.max(COMENT_COL_STD_MM, Math.ceil(need) + 1));
+      NAME_COL_W_MM = TABLE_W_MM - COMENT_COL_W_MM - GAP_MM;
+    }
 
     function widthFitPx(text, fontFamily, letterSpacingMm, availableWidthPx, maxPx) {
       if (!text) return maxPx;
@@ -600,12 +777,16 @@
         rows.forEach(function (row) {
           const nameEl = row.querySelector(".p-name");
           const comentEl = row.querySelector(".p-coment");
-          const nfs = widthFitPx(nameEl.dataset.text, "Anton", NAME_LS_MM, nameAvailPx, Math.min(nameMaxPx, heightMaxPx));
-          nameEl.style.fontSize = (nfs / MM_TO_PX) + "mm";
+          // 1º o comentário (limitado à coluna da direita); 2º o nome usa TODO o espaço
+          // que sobrou naquela linha (largura da tabela − comentário real − respiro).
+          let nameAvail = nameAvailPx + comentAvailPx; // linha sem comentário: largura toda
           if (comentEl && comentEl.dataset.text) {
             const cfs = widthFitPx(comentEl.dataset.text, "Bebas Neue", COMENT_LS_MM, comentAvailPx, Math.min(comentMaxPx, heightMaxPx));
             comentEl.style.fontSize = (cfs / MM_TO_PX) + "mm";
+            nameAvail = TABLE_W_MM * MM_TO_PX - comentEl.getBoundingClientRect().width - GAP_MM * MM_TO_PX;
           }
+          const nfs = widthFitPx(nameEl.dataset.text, "Anton", NAME_LS_MM, nameAvail, Math.min(nameMaxPx, heightMaxPx));
+          nameEl.style.fontSize = (nfs / MM_TO_PX) + "mm";
         });
 
         rows.forEach(function (row) {
@@ -640,5 +821,11 @@
     if (!ev.target.closest(".bank-row, .set-row, .popup")) hidePopup();
   });
 
-  loadSongs();
+  function boot() {
+    api.auth.me().then(function (u) {
+      if (u) { enterBandsScreen(u); }
+      else { resetAuthTab(); showScreen("screenAuth"); }
+    });
+  }
+  boot();
 })();

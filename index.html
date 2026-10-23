@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Repertório Maker</title>
+<title>Repertório Digital</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&display=swap" rel="stylesheet">
@@ -12,82 +12,175 @@
 </head>
 <body>
 
-<div class="phone" id="phone">
+<div class="phone" id="phone" data-view="both">
 
-  <!-- ===== Welcome screen ===== -->
-  <section class="welcome-screen" id="welcomeScreen">
-    <div class="welcome-emoji">🎸</div>
-    <h1>Repertório Digital</h1>
-    <p>Monte o setlist do show arrastando as músicas de um banco de dados.
-       Para começar, escolha o CSV com as músicas da banda.</p>
-    <label class="filebtn welcome-btn primary" for="csvInput">📂 Escolher CSV</label>
-    <button id="welcomeSampleBtn" class="welcome-btn" type="button">✨ Usar exemplo</button>
-    <div class="import-status" id="welcomeStatus"></div>
+  <!-- ===== Login / cadastro (tela de boas-vindas) ===== -->
+  <section class="screen" id="screenAuth">
+    <div class="auth-box">
+      <div class="welcome-emoji">🎸</div>
+      <h1>Repertório Digital</h1>
+      <p>Monte o setlist do show arrastando músicas do banco da sua banda.</p>
+
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" data-tab="login">Entrar</button>
+        <button type="button" class="auth-tab" data-tab="register">Criar conta</button>
+      </div>
+
+      <form id="loginForm" class="auth-form" autocomplete="on">
+        <input type="text" id="loginEmail" placeholder="Login" autocomplete="username" required>
+        <input type="password" id="loginPassword" placeholder="Senha" autocomplete="current-password" required>
+        <button type="submit" class="btn primary">Entrar</button>
+      </form>
+
+      <form id="registerForm" class="auth-form hidden" autocomplete="on">
+        <input type="text" id="registerName" placeholder="Seu nome" autocomplete="name" required>
+        <input type="email" id="registerEmail" placeholder="E-mail" autocomplete="username" required>
+        <input type="password" id="registerPassword" placeholder="Senha (mín. 4 caracteres)" autocomplete="new-password" required>
+        <button type="submit" class="btn primary">Criar conta</button>
+      </form>
+
+      <div class="status" id="authStatus"></div>
+      <div class="offline-note">Modo offline: os dados ficam salvos só neste navegador.</div>
+    </div>
   </section>
 
-  <!-- ===== View toggle ===== -->
-  <div class="view-toggle" id="viewToggle">
-    <button type="button" data-view="setlist">Repertório</button>
-    <button type="button" data-view="both" class="active">Ambos</button>
-    <button type="button" data-view="bank">Banco</button>
+  <!-- ===== Bandas ===== -->
+  <section class="screen hidden" id="screenBands">
+    <header class="top-bar">
+      <h1 id="bandsHello">Suas bandas</h1>
+      <button type="button" class="link-btn" id="logoutBtn">Sair</button>
+    </header>
+    <div class="screen-body">
+      <div class="pick-list" id="bandsList"></div>
+      <form class="inline-form" id="newBandForm">
+        <input type="text" id="newBandName" placeholder="Nome da nova banda" maxlength="60" required>
+        <button type="submit" class="btn primary">+ Criar</button>
+      </form>
+      <div class="status" id="bandsStatus"></div>
+    </div>
+  </section>
+
+  <!-- ===== Repertórios da banda ===== -->
+  <section class="screen hidden" id="screenReps">
+    <header class="top-bar">
+      <button type="button" class="link-btn" id="backToBandsBtn">‹ Bandas</button>
+      <h1 id="repsBandName"></h1>
+    </header>
+    <div class="screen-body">
+      <div class="pick-list" id="repsList"></div>
+      <form class="inline-form" id="newRepForm">
+        <input type="text" id="newRepName" placeholder="Título do novo repertório (ex.: Primeiro Set)" maxlength="60" required>
+        <button type="submit" class="btn primary">+ Criar</button>
+      </form>
+      <div class="status" id="repsStatus"></div>
+    </div>
+  </section>
+
+  <!-- ===== Editor: setlist (em cima) + banco (embaixo) ===== -->
+  <section class="screen hidden" id="screenEditor">
+    <header class="top-bar">
+      <button type="button" class="link-btn" id="backToRepsBtn">‹ Repertórios</button>
+      <h1 id="editorTitle"></h1>
+    </header>
+
+    <div class="view-toggle" id="viewToggle">
+      <button type="button" data-view="setlist">Repertório</button>
+      <button type="button" data-view="both" class="active">Ambos</button>
+      <button type="button" data-view="bank">Banco</button>
+    </div>
+
+    <section class="panel setlist-panel">
+      <header class="panel-head">
+        <h2>Repertório</h2>
+        <span class="count" id="setlistCount">0 músicas</span>
+      </header>
+      <div class="setlist-list" id="setlistList"></div>
+    </section>
+
+    <div class="divider"></div>
+
+    <section class="panel bank-panel">
+      <header class="panel-head">
+        <h2>Banco de Músicas</h2>
+        <span class="count" id="bankCount">0 músicas</span>
+      </header>
+
+      <div class="import-bar">
+        <label class="filebtn" for="csvInput">📂 Importar CSV</label>
+        <input type="file" id="csvInput" accept=".csv,text/csv">
+        <button id="downloadSampleBtn" type="button">⬇️ Modelo</button>
+        <button id="newSongBtn" type="button">➕ Nova</button>
+      </div>
+      <div class="import-status" id="importStatus"></div>
+
+      <div class="filters">
+        <select id="filterAfinacao"><option value="">Afinação: todas</option></select>
+        <select id="filterCategoria"><option value="">Categoria: todas</option></select>
+        <select id="filterNacional"><option value="">Nac./Int.: todos</option></select>
+      </div>
+
+      <div class="bank-list" id="bankList"></div>
+
+      <div class="print-bar">
+        <input type="text" id="tituloInput" placeholder="Título do repertório">
+        <select id="printMode" aria-label="Modalidade de impressão">
+          <option value="padrao">Padrão</option>
+          <option value="mauricio">Anot. Maurício</option>
+          <option value="flavio">Anot. Flávio</option>
+        </select>
+        <button id="printBtn" class="print-btn">🖨️ Imprimir</button>
+      </div>
+    </section>
+  </section>
+
+  <!-- ===== Modal: nova música ===== -->
+  <div class="modal-overlay hidden" id="songModalOverlay">
+    <form class="modal" id="songForm">
+      <h2>Nova música</h2>
+      <label>Nome *<input type="text" id="songNome" required maxlength="80"></label>
+      <label>Banda original<input type="text" id="songBanda" maxlength="60"></label>
+      <div class="two-col">
+        <label>Afinação<input type="text" id="songAfinacao" placeholder="Drop D" maxlength="20"></label>
+        <label>Quem começa<input type="text" id="songQuemComeca" placeholder="Guitarra" maxlength="30"></label>
+      </div>
+      <label>Categoria<input type="text" id="songCategoria" placeholder="Grunge, Metal…" maxlength="30"></label>
+      <div class="two-col">
+        <label>Anotação Maurício<input type="text" id="songAnotMauricio" maxlength="120"></label>
+        <label>Anotação Flávio<input type="text" id="songAnotFlavio" maxlength="120"></label>
+      </div>
+      <label>Nacional / Internacional
+        <select id="songNacional">
+          <option value="">—</option>
+          <option value="Nacional">Nacional</option>
+          <option value="Internacional">Internacional</option>
+        </select>
+      </label>
+      <div class="status" id="songStatus"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="songCancelBtn">Cancelar</button>
+        <button type="submit" class="btn primary">Salvar</button>
+      </div>
+    </form>
   </div>
-
-  <!-- ===== Top half: setlist ===== -->
-  <section class="panel setlist-panel">
-    <header class="panel-head">
-      <h1>Repertório</h1>
-      <span class="count" id="setlistCount">0 músicas</span>
-    </header>
-    <div class="setlist-list" id="setlistList">
-      <!-- setlist rows injected by JS -->
-      <p class="empty-hint" id="setlistEmptyHint">Toque numa música da lista abaixo para adicionar aqui.</p>
-    </div>
-  </section>
-
-  <div class="divider"></div>
-
-  <!-- ===== Bottom half: song bank ===== -->
-  <section class="panel bank-panel">
-    <header class="panel-head">
-      <h1>Banco de Músicas</h1>
-      <span class="count" id="bankCount">0 músicas</span>
-    </header>
-
-    <div class="import-bar">
-      <label class="filebtn" for="csvInput">📂 Importar CSV</label>
-      <input type="file" id="csvInput" accept=".csv,text/csv">
-      <button id="downloadSampleBtn" type="button">⬇️ CSV de exemplo</button>
-    </div>
-    <div class="import-status" id="importStatus"></div>
-
-    <div class="filters">
-      <select id="filterAfinacao"><option value="">Afinação: todas</option></select>
-      <select id="filterCategoria"><option value="">Categoria: todas</option></select>
-      <select id="filterNacional"><option value="">Nac./Int.: todos</option></select>
-    </div>
-
-    <div class="bank-list" id="bankList"></div>
-
-    <div class="print-bar">
-      <input type="text" id="tituloInput" value="Jardins do Jack" placeholder="Título do repertório">
-      <button id="printBtn" class="print-btn">🖨️ Imprimir Repertório</button>
-    </div>
-  </section>
 
 </div>
 
-<!-- ===== Hold/hover details popup ===== -->
+<!-- ===== Janelinha de detalhes (segurar / hover 1s) ===== -->
 <div class="popup" id="popup">
   <div class="popup-row"><span class="popup-label">Banda</span><span class="popup-value" id="popBanda"></span></div>
   <div class="popup-row"><span class="popup-label">Afinação</span><span class="popup-value" id="popAfinacao"></span></div>
   <div class="popup-row"><span class="popup-label">Quem começa</span><span class="popup-value" id="popQuem"></span></div>
   <div class="popup-row"><span class="popup-label">Categoria</span><span class="popup-value" id="popCategoria"></span></div>
   <div class="popup-row"><span class="popup-label">Nac./Int.</span><span class="popup-value" id="popNacional"></span></div>
+  <div class="popup-row" id="popRowMauricio"><span class="popup-label">Anot. Maurício</span><span class="popup-value" id="popAnotMauricio"></span></div>
+  <div class="popup-row" id="popRowFlavio"><span class="popup-label">Anot. Flávio</span><span class="popup-value" id="popAnotFlavio"></span></div>
 </div>
 
-<!-- ===== Hidden print sheets (built at print time) ===== -->
+<!-- ===== Folhas de impressão (montadas na hora de imprimir) ===== -->
 <div id="printRoot"></div>
 
+<script src="js/csv-schema.js"></script>
+<script src="js/api.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
