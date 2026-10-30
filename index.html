@@ -12,13 +12,13 @@
 </head>
 <body>
 
-<div class="phone" id="phone" data-view="both">
+<div class="phone" id="phone" data-view="setlist">
 
   <!-- ===== Login / cadastro (tela de boas-vindas) ===== -->
   <section class="screen" id="screenAuth">
     <div class="auth-box">
       <div class="welcome-emoji">🎸</div>
-      <h1>Repertório Digital</h1>
+      <h1 class="brand">Repertório Digital</h1>
       <p>Monte o setlist do show arrastando músicas do banco da sua banda.</p>
 
       <div class="auth-tabs">
@@ -27,7 +27,7 @@
       </div>
 
       <form id="loginForm" class="auth-form" autocomplete="on">
-        <input type="text" id="loginEmail" placeholder="Login" autocomplete="username" required>
+        <input type="text" id="loginEmail" placeholder="E-mail ou usuário" autocomplete="username" autocapitalize="none" required>
         <input type="password" id="loginPassword" placeholder="Senha" autocomplete="current-password" required>
         <button type="submit" class="btn primary">Entrar</button>
       </form>
@@ -40,6 +40,7 @@
       </form>
 
       <div class="status" id="authStatus"></div>
+      <div class="demo-note">Demo: usuário <b>adm</b> · senha <b>adm</b></div>
       <div class="offline-note">Modo offline: os dados ficam salvos só neste navegador.</div>
     </div>
   </section>
@@ -76,67 +77,83 @@
     </div>
   </section>
 
-  <!-- ===== Editor: setlist (em cima) + banco (embaixo) ===== -->
+  <!-- ===== Editor: abas Repertório / Músicas + menu lateral ===== -->
   <section class="screen hidden" id="screenEditor">
     <header class="top-bar">
+      <button type="button" class="menu-btn" id="menuBtn" aria-label="Abrir/fechar menu" aria-expanded="false">☰</button>
       <button type="button" class="link-btn" id="backToRepsBtn">‹ Repertórios</button>
       <h1 id="editorTitle"></h1>
     </header>
 
     <div class="view-toggle" id="viewToggle">
-      <button type="button" data-view="setlist">Repertório</button>
-      <button type="button" data-view="both" class="active">Ambos</button>
-      <button type="button" data-view="bank">Banco</button>
+      <button type="button" data-view="setlist" class="active">Repertório</button>
+      <button type="button" data-view="bank">Músicas</button>
     </div>
 
     <section class="panel setlist-panel">
       <header class="panel-head">
         <h2>Repertório</h2>
-        <span class="count" id="setlistCount">0 músicas</span>
+        <span class="head-right">
+          <span class="count" id="setlistCount">0 músicas</span>
+          <button type="button" class="play-btn" id="playBtn">▶ Play</button>
+        </span>
       </header>
       <div class="setlist-list" id="setlistList"></div>
     </section>
 
-    <div class="divider"></div>
-
     <section class="panel bank-panel">
       <header class="panel-head">
-        <h2>Banco de Músicas</h2>
+        <h2>Músicas</h2>
         <span class="count" id="bankCount">0 músicas</span>
       </header>
-
-      <div class="import-bar">
-        <label class="filebtn" for="csvInput">📂 Importar CSV</label>
-        <input type="file" id="csvInput" accept=".csv,text/csv">
-        <button id="downloadSampleBtn" type="button">⬇️ Modelo</button>
-        <button id="newSongBtn" type="button">➕ Nova</button>
-      </div>
-      <div class="import-status" id="importStatus"></div>
-
       <div class="filters">
         <select id="filterAfinacao"><option value="">Afinação: todas</option></select>
         <select id="filterCategoria"><option value="">Categoria: todas</option></select>
         <select id="filterNacional"><option value="">Nac./Int.: todos</option></select>
       </div>
-
       <div class="bank-list" id="bankList"></div>
-
-      <div class="print-bar">
-        <input type="text" id="tituloInput" placeholder="Título do repertório">
-        <select id="printMode" aria-label="Modalidade de impressão">
-          <option value="padrao">Padrão</option>
-          <option value="mauricio">Anot. Maurício</option>
-          <option value="flavio">Anot. Flávio</option>
-        </select>
-        <button id="printBtn" class="print-btn">🖨️ Imprimir</button>
-      </div>
     </section>
+
+    <!-- botão flutuante: nova música -->
+    <button type="button" class="fab" id="newSongBtn" aria-label="Nova música">+</button>
+
+    <!-- menu lateral (colapsa/expande pelo botão ☰) -->
+    <div class="drawer-scrim" id="drawerScrim"></div>
+    <aside class="drawer" id="drawer" aria-hidden="true">
+      <div class="drawer-head"><strong>Menu</strong><button type="button" class="link-btn" id="drawerClose">✕</button></div>
+      <div class="drawer-body">
+        <div class="drawer-title">Banco de músicas</div>
+        <label class="drawer-item" for="csvInput">📂 Importar banco de músicas (CSV)</label>
+        <input type="file" id="csvInput" accept=".csv,text/csv">
+        <button type="button" class="drawer-item" id="downloadSampleBtn">⬇️ Baixar modelo (CSV)</button>
+
+        <div class="drawer-title">Repertório atual</div>
+        <label class="drawer-item" for="repCsvInput">📂 Importar repertório (CSV)</label>
+        <input type="file" id="repCsvInput" accept=".csv,text/csv">
+        <button type="button" class="drawer-item" id="exportRepBtn">💾 Baixar repertório (CSV)</button>
+        <input type="text" id="tituloInput" placeholder="Título da impressão">
+        <button type="button" class="drawer-item primary" id="printBtn">🖨️ Imprimir</button>
+
+        <div class="import-status" id="importStatus"></div>
+      </div>
+    </aside>
+  </section>
+
+  <!-- ===== Modo Play: um slide por música, rolagem lateral ===== -->
+  <section class="play-screen hidden" id="playScreen">
+    <header class="play-bar">
+      <button type="button" class="play-nav" id="playPrev" aria-label="Anterior">‹</button>
+      <span class="play-counter" id="playCounter">1 / 1</span>
+      <button type="button" class="play-nav" id="playNext" aria-label="Próxima">›</button>
+      <button type="button" class="play-close" id="playClose" aria-label="Fechar">✕</button>
+    </header>
+    <div class="play-track" id="playTrack"></div>
   </section>
 
   <!-- ===== Modal: nova música ===== -->
   <div class="modal-overlay hidden" id="songModalOverlay">
     <form class="modal" id="songForm">
-      <h2>Nova música</h2>
+      <h2 id="songModalTitle">Nova música</h2>
       <label>Nome *<input type="text" id="songNome" required maxlength="80"></label>
       <label>Banda original<input type="text" id="songBanda" maxlength="60"></label>
       <div class="two-col">
@@ -144,10 +161,6 @@
         <label>Quem começa<input type="text" id="songQuemComeca" placeholder="Guitarra" maxlength="30"></label>
       </div>
       <label>Categoria<input type="text" id="songCategoria" placeholder="Grunge, Metal…" maxlength="30"></label>
-      <div class="two-col">
-        <label>Anotação Maurício<input type="text" id="songAnotMauricio" maxlength="120"></label>
-        <label>Anotação Flávio<input type="text" id="songAnotFlavio" maxlength="120"></label>
-      </div>
       <label>Nacional / Internacional
         <select id="songNacional">
           <option value="">—</option>
@@ -155,8 +168,10 @@
           <option value="Internacional">Internacional</option>
         </select>
       </label>
+      <label>Anotação<textarea id="songAnotacao" rows="3" maxlength="600" placeholder="Pegadinhas, marcações, timbre, pedal..."></textarea></label>
       <div class="status" id="songStatus"></div>
       <div class="modal-actions">
+        <button type="button" class="btn danger hidden" id="songDeleteBtn">Excluir</button>
         <button type="button" class="btn" id="songCancelBtn">Cancelar</button>
         <button type="submit" class="btn primary">Salvar</button>
       </div>
@@ -172,8 +187,7 @@
   <div class="popup-row"><span class="popup-label">Quem começa</span><span class="popup-value" id="popQuem"></span></div>
   <div class="popup-row"><span class="popup-label">Categoria</span><span class="popup-value" id="popCategoria"></span></div>
   <div class="popup-row"><span class="popup-label">Nac./Int.</span><span class="popup-value" id="popNacional"></span></div>
-  <div class="popup-row" id="popRowMauricio"><span class="popup-label">Anot. Maurício</span><span class="popup-value" id="popAnotMauricio"></span></div>
-  <div class="popup-row" id="popRowFlavio"><span class="popup-label">Anot. Flávio</span><span class="popup-value" id="popAnotFlavio"></span></div>
+  <div class="popup-row" id="popRowAnot"><span class="popup-label">Anotação</span><span class="popup-value" id="popAnotacao"></span></div>
 </div>
 
 <!-- ===== Folhas de impressão (montadas na hora de imprimir) ===== -->

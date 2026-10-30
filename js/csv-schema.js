@@ -16,6 +16,10 @@
   // normalizar (minúsculo, sem acento, só letras/números), então "Afinação",
   // "AFINAÇÃO" e "afinacao" já são a mesma coisa — aqui entram só os typos/apelidos.
   var HEADER_DICTIONARY = {
+    ordem: [
+      "ordem", "n", "no", "nº", "n°", "num", "numero", "número", "numeracao", "posicao", "posição",
+      "seq", "sequencia", "sequência", "#", "ordem no repertorio", "oredm", "ordm", "odem"
+    ],
     nome: [
       "nome", "nome da musica", "nome musica", "musica", "musicas", "titulo", "titulo da musica",
       "name", "song", "track", "nmoe", "nom", "nome da msica", "mmusica", "musca", "muzica"
@@ -44,24 +48,17 @@
       "nacional e internacional", "nacional/internaciona", "nacioal/internacional", "nacional/internacioanl",
       "internacional/nacional", "nacionalidade", "origem", "nacional", "internacional", "pais"
     ],
-    anotacaoMauricio: [
-      "anotacao mauricio", "anotacoes mauricio", "anotacao maurício", "anotação maurício", "anotações maurício",
-      "anotacao do mauricio", "anotacoes do mauricio", "anot mauricio", "anot. mauricio", "obs mauricio",
-      "observacao mauricio", "anotacao maurisio", "anotacao mauricio ", "anotacao mauricío", "anotaçao mauricio",
-      "anotacao mauricoi", "anotacao maurico", "anotacao mauricius", "mauricio", "maurício", "maurisio"
-    ],
-    anotacaoFlavio: [
-      "anotacao flavio", "anotacoes flavio", "anotacao flávio", "anotação flávio", "anotações flávio",
-      "anotacao do flavio", "anotacoes do flavio", "anot flavio", "anot. flavio", "obs flavio",
-      "observacao flavio", "anotacao flavo", "anotacao flavio ", "anotaçao flavio", "anotacao falvio",
-      "anotacao flavioo", "anotacao flavia", "flavio", "flávio", "falvio", "flavo"
+    anotacao: [
+      "anotacao", "anotacoes", "anotação", "anotações", "anotaçao", "anotaco", "anotasao", "anotacaoo",
+      "observacao", "observacoes", "observação", "observações", "obs", "notas", "nota", "notes", "note",
+      "comentario", "comentarios", "detalhes", "anotacao da musica"
     ]
   };
 
   var FIELD_LABELS = {
-    nome: "Nome", bandaOriginal: "banda", afinacao: "afinação", quemComeca: "quem começa",
+    ordem: "Ordem", nome: "Nome", bandaOriginal: "banda", afinacao: "afinação", quemComeca: "quem começa",
     categoria: "categoria", nacional: "nacional/internacional",
-    anotacaoMauricio: "Anotação Maurício", anotacaoFlavio: "Anotação Flávio"
+    anotacao: "Anotação"
   };
 
   function norm(s) {

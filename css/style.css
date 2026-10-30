@@ -472,6 +472,137 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .modal .two-col label { flex: 1; min-width: 0; }
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
+
+/* ---------------- Anotações, editar, Play ---------------- */
+.demo-note { font-size: 11.5px; color: var(--muted); margin-top: 10px; }
+.demo-note b { color: var(--text); }
+.head-right { display: flex; align-items: center; gap: 10px; }
+.play-btn {
+  font-size: 11.5px; font-weight: 800; padding: 5px 11px; border-radius: 999px;
+  border: none; background: var(--accent); color: var(--accent-ink); cursor: pointer;
+}
+.play-btn:active { filter: brightness(0.9); }
+.edit-btn {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.07); color: var(--muted); font-size: 13px; line-height: 1; cursor: pointer;
+}
+.edit-btn:active { background: rgba(255,255,255,0.18); }
+.note-dot { color: var(--accent); font-size: 9px; vertical-align: middle; }
+.btn.danger { border-color: #7a1f23; color: #ff6b6f; margin-right: auto; }
+.modal textarea, .play-screen textarea {
+  width: 100%; resize: vertical; font: inherit; font-size: 13.5px; padding: 9px 10px;
+  border-radius: 9px; border: 1px solid var(--border); background: var(--row-bg); color: var(--text);
+  text-transform: none; letter-spacing: 0;
+}
+.modal textarea:focus, .play-screen textarea:focus { outline: 1px solid var(--accent); }
+
+.play-screen {
+  position: absolute; inset: 0; z-index: 120; background: #000;
+  display: flex; flex-direction: column; min-height: 0;
+}
+.play-screen.hidden { display: none !important; }
+.play-bar {
+  flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+  background: #0a0b0e; border-bottom: 1px solid var(--border);
+}
+.play-counter { flex: 1; text-align: center; font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.08em; }
+.play-nav, .play-close {
+  width: 44px; height: 38px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--row-bg); color: var(--text); font-size: 24px; line-height: 1; cursor: pointer;
+}
+.play-close { font-size: 17px; color: var(--accent); margin-left: 6px; }
+.play-nav:active, .play-close:active { background: var(--row-bg-hover); }
+.play-track {
+  flex: 1; min-height: 0; display: flex; overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; overscroll-behavior-x: contain;
+}
+.play-track::-webkit-scrollbar { display: none; }
+.play-slide {
+  flex: 0 0 100%; width: 100%; scroll-snap-align: start; scroll-snap-stop: always;
+  overflow-y: auto; padding: 18px 18px 24px 18px; display: flex; flex-direction: column; gap: 10px;
+}
+.ps-num { font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: var(--accent); letter-spacing: 0.1em; }
+.ps-name { margin: 0; font-family: 'Anton', sans-serif; font-weight: 400; font-size: 38px; line-height: 1.05; text-transform: uppercase; overflow-wrap: anywhere; }
+.ps-band { color: var(--muted); font-size: 14px; }
+.ps-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ps-chip {
+  font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 2px 10px; border-radius: 999px; border: 1px solid var(--accent); color: var(--text);
+}
+.ps-note {
+  white-space: pre-wrap; overflow-wrap: anywhere; font-size: 22px; line-height: 1.35; font-weight: 600;
+  background: #101116; border: 1px solid var(--border); border-radius: 12px; padding: 14px; min-height: 90px;
+}
+.ps-empty { color: var(--muted); font-size: 14px; font-weight: 400; }
+.ps-actions { display: flex; gap: 8px; }
+.ps-actions .btn { flex: 1; }
+.ps-actions .btn.hidden, .ps-edit.hidden, .ps-note.hidden { display: none !important; }
+
+
+/* ---------------- Marca, FAB, menu lateral ---------------- */
+.auth-box h1.brand {
+  font-family: 'Anton', sans-serif; font-weight: 400; font-size: 34px; line-height: 1.05;
+  letter-spacing: 0.02em; text-transform: uppercase; margin: 0 0 10px 0;
+}
+.menu-btn {
+  flex-shrink: 0; width: 36px; height: 34px; border-radius: 9px; border: 1px solid var(--border);
+  background: var(--row-bg); color: var(--text); font-size: 18px; line-height: 1; cursor: pointer;
+}
+.menu-btn:active { background: var(--row-bg-hover); }
+.menu-btn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+.top-bar .menu-btn + .link-btn { margin-right: auto; }
+#screenEditor .top-bar h1 { flex: 1; }
+
+.fab {
+  position: absolute; right: 16px; bottom: 18px; z-index: 60;
+  width: 56px; height: 56px; border-radius: 50%; border: none;
+  background: var(--accent); color: var(--accent-ink);
+  font-size: 34px; font-weight: 300; line-height: 1; padding: 0 0 4px 0;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.55); cursor: pointer;
+}
+.fab:active { filter: brightness(0.9); transform: scale(0.96); }
+.phone[data-view="setlist"] .fab { display: none; }
+.bank-list { padding-bottom: 84px; }
+
+.drawer-scrim {
+  position: absolute; inset: 0; z-index: 130; background: rgba(0,0,0,0.55);
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.drawer-scrim.open { opacity: 1; pointer-events: auto; }
+.drawer {
+  position: absolute; top: 0; bottom: 0; left: 0; z-index: 140; width: 82%; max-width: 310px;
+  background: #111216; border-right: 1px solid var(--border);
+  transform: translateX(-104%); transition: transform 0.22s ease; visibility: hidden;
+  display: flex; flex-direction: column; box-shadow: 8px 0 30px rgba(0,0,0,0.5);
+}
+.drawer.open { transform: none; visibility: visible; }
+.drawer-head {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+  padding: 14px; border-bottom: 1px solid var(--border);
+}
+.drawer-body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 14px 18px 14px; display: flex; flex-direction: column; gap: 8px; }
+.drawer-title { margin-top: 12px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.drawer input[type="file"] { display: none; }
+.drawer-item {
+  display: block; width: 100%; text-align: left; font-size: 13px; font-weight: 600;
+  padding: 12px 12px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--row-bg); color: var(--text); cursor: pointer;
+}
+.drawer-item:active { background: var(--row-bg-hover); }
+.drawer-item.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.drawer #tituloInput { font-size: 13px; padding: 10px 11px; margin-top: 4px; }
+.drawer .import-status { padding: 4px 2px; margin-top: 6px; font-size: 12px; min-height: 0; }
+
+
+.toast {
+  position: absolute; left: 50%; bottom: 84px; z-index: 160; max-width: 86%;
+  transform: translate(-50%, 12px); opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+  background: #f2f3f5; color: #0e0f12; font-size: 12.5px; font-weight: 700; padding: 9px 14px; border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5); text-align: center;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
 /* ================================================================
    Print sheets — same visual spec as the Repertório Maker PDF:
    Anton/Bebas Neue, 92% table width (4% margin each side), all caps,
@@ -553,8 +684,3 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
   @page { size: A4 portrait; margin: 0; }
 }
 
-/* seletor de modalidade de impressão */
-.print-bar select {
-  flex-shrink: 0; width: 92px; font-size: 11px; padding: 0 4px; border-radius: 8px;
-  border: 1px solid var(--border); background: var(--row-bg); color: var(--text);
-}
