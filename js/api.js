@@ -58,6 +58,8 @@
     return "fh" + (h >>> 0).toString(16);
   }
   function str(v) { return String(v == null ? "" : v).trim(); }
+  // anotação: mantém tabs/enters e espaços internos; só tira linhas vazias das pontas
+  function note(v) { return String(v == null ? "" : v).replace(/\r\n?/g, "\n").replace(/^\s*\n/, "").replace(/\s+$/, ""); }
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
   // ---------------- sessão / posse ----------------
@@ -178,7 +180,7 @@
       quemComeca: str(d.quemComeca),
       categoria: str(d.categoria),
       nacional: str(d.nacional),
-      anotacao: str(d.anotacao)
+      anotacao: note(d.anotacao)
     };
   }
   var songs = {
@@ -216,6 +218,35 @@
           return r;
         }));
         return true;
+      });
+    },
+    // Exclusão em massa: ids -> { removed }
+    removeMany: function (ids) {
+      return simulate(function () {
+        var set = {}, n = 0;
+        (ids || []).forEach(function (id) { ownedSong(id); set[id] = true; });
+        write("songs", read("songs", []).filter(function (s) { if (set[s.id]) { n++; return false; } return true; }));
+        write("repertoires", read("repertoires", []).map(function (r) {
+          r.songIds = r.songIds.filter(function (x) { return !set[x]; });
+          return r;
+        }));
+        return { removed: n };
+      });
+    },
+    // Edição em massa: ids + changes (só os campos presentes mudam) -> { updated }
+    updateMany: function (ids, changes) {
+      return simulate(function () {
+        var F = ["afinacao", "quemComeca", "categoria", "nacional", "anotacao"], set = {}, n = 0;
+        (ids || []).forEach(function (id) { ownedSong(id); set[id] = true; });
+        write("songs", read("songs", []).map(function (s) {
+          if (!set[s.id]) return s;
+          F.forEach(function (f) {
+            if (!changes || !Object.prototype.hasOwnProperty.call(changes, f)) return;
+            s[f] = f === "anotacao" ? note(changes[f]) : str(changes[f]);
+          });
+          n++; return s;
+        }));
+        return { updated: n };
       });
     },
     // rows: [{nome, bandaOriginal, afinacao, quemComeca, categoria, nacional, anotacao}]

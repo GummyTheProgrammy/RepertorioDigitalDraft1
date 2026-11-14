@@ -128,6 +128,10 @@
   function capitalize(v) { return v ? v.charAt(0).toUpperCase() + v.slice(1).toLowerCase() : v; }
 
   function cleanValue(field, v) {
+    if (field === "anotacao") { // anotação: preserva quebras de linha e tabulações
+      v = String(v == null ? "" : v).replace(/\r\n?/g, "\n").replace(/^\s*\n/, "").replace(/\s+$/, "");
+      return v;
+    }
     v = stripQuotes(v);
     if (!v) return "";
     if (field === "afinacao") return v.toUpperCase();

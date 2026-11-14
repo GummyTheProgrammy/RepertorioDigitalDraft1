@@ -97,3 +97,14 @@ Para ir pro online (ex.: Supabase), reescreva **somente** o `api.js` mantendo es
 
 - Dados presos ao navegador/computador (limpar dados do site apaga tudo).
 - Sem PWA/service worker (offline total exige baixar as dependências, ver acima).
+
+## v6
+
+- **Seleção em massa** (aba Músicas → "☑ Selecionar"): marcar várias, "Todas/Nenhuma", **＋ Rep.** (adiciona ao repertório), **✎ Editar** (afinação, quem começa, categoria, nac./int., anotação substituindo ou acrescentando) e **🗑 Excluir**.
+- **Anotações** mantêm tabulações, enters e espaços (tela, Play, modal e CSV). A tecla Tab insere tabulação na caixa.
+- **Markdown** (`js/markdown.js`, seguro, sem HTML/links): `# títulos`, `**negrito**`, `*itálico*`, `~~riscado~~`, `==destaque==`, `` `código` ``, listas, tarefas `- [ ]`, `> citação`, `---`, blocos ``` . Em Aa (Play): Automático (detecta) / Sempre / Desligado. No modal aparece "Markdown detectado" + prévia.
+- **Acentos no CSV**: a importação detecta UTF-8, UTF-16 e Windows-1252 (Excel) e conserta texto já quebrado ("mÃºsica").
+
+## v7
+
+- **Visão para computador**: o app detecta o aparelho (tela ≥ 900 px + mouse) e, no PC, ocupa a janela com Repertório e Músicas lado a lado (sem abas), hover nas linhas, menu lateral mais largo e Play com margens maiores. No celular/tablet continua o layout de antes; reage ao redimensionar a janela.
