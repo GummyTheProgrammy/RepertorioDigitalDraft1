@@ -17,7 +17,7 @@
 (function () {
   "use strict";
 
-  var NS = "repertorio-digital:v1:";
+  var NS = "repertorio-digital:v2:"; // v2: esquema com 'anotacao' (não mistura com a versão v1 no mesmo domínio)
   var LATENCY_MS = 80;
   var mem = {}; // fallback se o localStorage estiver bloqueado
 
@@ -58,6 +58,8 @@
     return "fh" + (h >>> 0).toString(16);
   }
   function str(v) { return String(v == null ? "" : v).trim(); }
+  // anotação: mantém tabs/enters e espaços internos; só tira linhas vazias das pontas
+  function note(v) { return String(v == null ? "" : v).replace(/\r\n?/g, "\n").replace(/^\s*\n/, "").replace(/\s+$/, ""); }
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
   // ---------------- sessão / posse ----------------
@@ -88,6 +90,16 @@
     return s;
   }
 
+  // ---------------- usuário demo (adm / adm) ----------------
+  // Criado automaticamente para testes. Remover ao ir pro online.
+  var DEMO = { email: "adm", password: "adm", name: "Administrador (demo)" };
+  function ensureDemo() {
+    var users = read("users", []);
+    if (users.some(function (u) { return u.email === DEMO.email; })) return;
+    users.push({ id: "usr_demo", name: DEMO.name, email: DEMO.email, passwordHash: fakeHash(DEMO.password), createdAt: 0 });
+    write("users", users);
+  }
+
   // ---------------- auth ----------------
   var auth = {
     register: function (d) {
@@ -96,6 +108,7 @@
         if (!name) throw new ApiError("invalid_input", "Informe seu nome.");
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new ApiError("invalid_input", "E-mail inválido.");
         if (pass.length < 4) throw new ApiError("invalid_input", "A senha precisa ter ao menos 4 caracteres.");
+        ensureDemo();
         var users = read("users", []);
         if (users.some(function (u) { return u.email === email; })) throw new ApiError("email_taken", "Esse e-mail já está cadastrado.");
         var u = { id: uid("usr"), name: name, email: email, passwordHash: fakeHash(pass), createdAt: Date.now() };
@@ -107,18 +120,8 @@
     },
     login: function (d) {
       return simulate(function () {
+        ensureDemo();
         var email = str(d && d.email).toLowerCase(), pass = String((d && d.password) || "");
-        if (email === "adm" && pass === "adm") {
-          var users = read("users", []);
-          var admin = users.filter(function (x) { return x.id === "usr_homologacao_adm"; })[0];
-          if (!admin) {
-            admin = { id: "usr_homologacao_adm", name: "adm", email: "adm", passwordHash: fakeHash("adm"), createdAt: Date.now() };
-            users.push(admin);
-            write("users", users);
-          }
-          write("session", { userId: admin.id });
-          return publicUser(admin);
-        }
         var u = read("users", []).filter(function (x) { return x.email === email; })[0];
         if (!u || u.passwordHash !== fakeHash(pass)) throw new ApiError("invalid_credentials", "E-mail ou senha incorretos.");
         write("session", { userId: u.id });
@@ -177,8 +180,7 @@
       quemComeca: str(d.quemComeca),
       categoria: str(d.categoria),
       nacional: str(d.nacional),
-      anotacaoMauricio: str(d.anotacaoMauricio),
-      anotacaoFlavio: str(d.anotacaoFlavio)
+      anotacao: note(d.anotacao)
     };
   }
   var songs = {
@@ -218,7 +220,36 @@
         return true;
       });
     },
-    // rows: [{nome, bandaOriginal, afinacao, quemComeca, categoria, nacional, anotacaoMauricio, anotacaoFlavio}]
+    // Exclusão em massa: ids -> { removed }
+    removeMany: function (ids) {
+      return simulate(function () {
+        var set = {}, n = 0;
+        (ids || []).forEach(function (id) { ownedSong(id); set[id] = true; });
+        write("songs", read("songs", []).filter(function (s) { if (set[s.id]) { n++; return false; } return true; }));
+        write("repertoires", read("repertoires", []).map(function (r) {
+          r.songIds = r.songIds.filter(function (x) { return !set[x]; });
+          return r;
+        }));
+        return { removed: n };
+      });
+    },
+    // Edição em massa: ids + changes (só os campos presentes mudam) -> { updated }
+    updateMany: function (ids, changes) {
+      return simulate(function () {
+        var F = ["afinacao", "quemComeca", "categoria", "nacional", "anotacao"], set = {}, n = 0;
+        (ids || []).forEach(function (id) { ownedSong(id); set[id] = true; });
+        write("songs", read("songs", []).map(function (s) {
+          if (!set[s.id]) return s;
+          F.forEach(function (f) {
+            if (!changes || !Object.prototype.hasOwnProperty.call(changes, f)) return;
+            s[f] = f === "anotacao" ? note(changes[f]) : str(changes[f]);
+          });
+          n++; return s;
+        }));
+        return { updated: n };
+      });
+    },
+    // rows: [{nome, bandaOriginal, afinacao, quemComeca, categoria, nacional, anotacao}]
     // Upsert por nome + bandaOriginal (sem diferenciar maiúsculas).
     importCsv: function (bandId, rows) {
       return simulate(function () {
@@ -231,7 +262,7 @@
           var clean;
           try { clean = cleanSong(r); } catch (e) { return; }
           var hit = index[key(clean)];
-          if (hit) { Object.assign(hit, clean); updated++; }
+          if (hit) { if (!clean.anotacao) clean.anotacao = hit.anotacao || ""; Object.assign(hit, clean); updated++; }
           else {
             clean.id = uid("sng"); clean.bandId = bandId; clean.createdAt = Date.now();
             all.push(clean); index[key(clean)] = clean; created++;
