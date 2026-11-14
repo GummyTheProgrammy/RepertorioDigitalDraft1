@@ -15,8 +15,9 @@ chamadas de API** — para validar o modelo antes de ir pro online.
   - Importar banco de músicas (CSV) · Baixar modelo (CSV)
   - Importar repertório (CSV) · Baixar repertório (CSV) · **Imprimir**
 - **Segurar o dedo / deixar o mouse 1 s** sobre uma música mostra os detalhes (banda, afinação, quem começa, categoria, nacional/internacional, anotação).
-- **Anotações:** ✎ numa música abre o modal de edição (dados + anotação + Excluir); um ● marca as que têm nota.
-- **▶ Play:** um slide por música (nome, banda, afinação, quem começa e a anotação em letra grande). **Role para a direita/esquerda** (dedo, trackpad, ‹ ›, teclas ← →) para passar de música; edite a anotação ali mesmo. Tocar numa música do repertório abre o Play nela. Esc fecha.
+- **Anotações:** ✎ numa música abre o modal de edição (dados + anotação + Excluir); um ● marca as que têm nota. A caixa da anotação **começa pequena, cresce conforme você digita e para numa altura máxima proporcional à altura do aparelho** (depois disso rola por dentro).
+- **▶ Play:** um slide por música (nome, banda, afinação, quem começa e a anotação em letra grande). **Role para a direita/esquerda** (dedo, trackpad, ‹ ›, teclas ← →) para passar de música; a anotação rola **por dentro da própria caixa** (a tela não rola). O botão **Aa** abre os ajustes: **tamanho da letra** (14–56 px, salvo no aparelho) e **dividir anotação por parágrafos** (cada parágrafo separado por linha em branco vira um slide da mesma música; o contador mostra "8 / 49 · 2/5"). Edite a anotação ali mesmo. Tocar numa música do repertório abre o Play nela. Esc fecha.
+- **Arrastar para reordenar:** no celular use a **alça ⠿** à esquerda de cada música; o resto da linha rola a lista normalmente. No mouse, arrasta-se pela linha toda.
 - **Repertório em CSV (com os dados das músicas):** o arquivo baixado tem `Ordem, Nome, banda, afinação, quem começa, categoria, nacional/internacional, Anotação`. Ao importar, as músicas que ainda não existem no banco são criadas, as existentes são atualizadas e o repertório atual é **substituído** (com confirmação) na ordem do arquivo (coluna `Ordem`, se houver).
 - **Imprimir** (menu): folhas no formato "Jack's House" (A4, 20 músicas por página, tabela em 92% da largura, TUDO EM CAIXA ALTA, Anton/Bebas Neue, sem estourar a linha) — na janela de impressão escolha **Salvar como PDF**. O título é editável no menu.
 
@@ -69,7 +70,7 @@ Nome,banda,afinação,quem começa,categoria,nacional/internacional,Anotação
 - Colunas desconhecidas são ignoradas e listadas na mensagem de importação.
 - **Valores normalizados:** afinação em MAIÚSCULAS, categoria como "Rock", nacional/internacional como
   "Nacional" ou "Internacional" (assim os filtros não duplicam `ROCK`/`rock`); aspas soltas são removidas.
-- A importação **atualiza** músicas que já existem (mesmo nome + banda) e cria as novas. Célula de anotação vazia **não apaga** a anotação que o usuário já escreveu.
+- **Músicas duplicadas** (mesmo nome + banda, sem diferenciar maiúsculas/acentos) abrem uma tela de **comparação**: para cada uma você vê "No banco" × "No arquivo" (verde = valor do arquivo, vermelho = valor atual) e escolhe **Manter** ou **Sobrepor**; há atalhos "Manter todas" / "Sobrepor todas" e Cancelar (não aplica nada). Idênticas são ignoradas; as novas são criadas. Sobrepor usa os campos preenchidos do arquivo — campo vazio no arquivo **não apaga** o que já existe (inclusive a anotação). Vale para importar banco e importar repertório.
 
 ## A "API" local e como trocar por um backend real
 

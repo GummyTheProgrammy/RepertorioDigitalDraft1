@@ -145,10 +145,43 @@
       <button type="button" class="play-nav" id="playPrev" aria-label="Anterior">‹</button>
       <span class="play-counter" id="playCounter">1 / 1</span>
       <button type="button" class="play-nav" id="playNext" aria-label="Próxima">›</button>
+      <button type="button" class="play-nav play-gear" id="playSettingsBtn" aria-label="Ajustes do Play" aria-expanded="false">Aa</button>
       <button type="button" class="play-close" id="playClose" aria-label="Fechar">✕</button>
     </header>
+    <div class="play-settings hidden" id="playSettings">
+      <div class="ps-set-row">
+        <span class="ps-set-label">Tamanho da letra</span>
+        <span class="ps-set-val" id="playSizeVal">22 px</span>
+      </div>
+      <div class="ps-set-row">
+        <button type="button" class="btn ps-step" id="playSizeDown" aria-label="Diminuir">A−</button>
+        <input type="range" id="playSize" min="14" max="56" step="2" value="22">
+        <button type="button" class="btn ps-step" id="playSizeUp" aria-label="Aumentar">A+</button>
+      </div>
+      <label class="ps-switch">
+        <input type="checkbox" id="playSplit">
+        <span>Dividir anotação por parágrafos<small>Cada parágrafo (separado por linha em branco) vira um slide da mesma música.</small></span>
+      </label>
+    </div>
     <div class="play-track" id="playTrack"></div>
   </section>
+
+  <!-- ===== Importação: músicas duplicadas (manter / sobrepor / comparar) ===== -->
+  <div class="modal-overlay hidden" id="dupOverlay">
+    <div class="modal dup-modal">
+      <h2>Músicas duplicadas</h2>
+      <p class="dup-sub" id="dupSummary"></p>
+      <div class="dup-bulk">
+        <button type="button" class="btn" id="dupKeepAll">Manter todas</button>
+        <button type="button" class="btn" id="dupOverwriteAll">Sobrepor todas</button>
+      </div>
+      <div class="dup-list" id="dupList"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="dupCancel">Cancelar</button>
+        <button type="button" class="btn primary" id="dupApply">Aplicar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ===== Modal: nova música ===== -->
   <div class="modal-overlay hidden" id="songModalOverlay">
@@ -168,7 +201,7 @@
           <option value="Internacional">Internacional</option>
         </select>
       </label>
-      <label>Anotação<textarea id="songAnotacao" rows="3" maxlength="600" placeholder="Pegadinhas, marcações, timbre, pedal..."></textarea></label>
+      <label>Anotação<textarea id="songAnotacao" rows="2" maxlength="6000" placeholder="Pegadinhas, marcações, timbre, pedal..."></textarea></label>
       <div class="status" id="songStatus"></div>
       <div class="modal-actions">
         <button type="button" class="btn danger hidden" id="songDeleteBtn">Excluir</button>

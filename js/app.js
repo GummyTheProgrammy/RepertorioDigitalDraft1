@@ -383,7 +383,8 @@
         if (!moved) { held = true; showPopup(el, opts.getSong()); }
       }, HOLD_MS);
 
-      if (opts.dragContainer) {
+      // mouse arrasta pela linha toda; dedo/caneta só pela alça ⠿ (o resto da linha rola a lista)
+      if (opts.dragContainer && (ev.pointerType === "mouse" || ev.target.closest(".drag-dots"))) {
         startPotentialDrag(el, opts.dragContainer, ev);
       }
     });
@@ -539,6 +540,7 @@
       $("songAnotacao").value = song.anotacao || "";
     }
     $("songModalOverlay").classList.remove("hidden");
+    autoGrow($("songAnotacao"), 0.35);
     setTimeout(function () { $(song ? "songAnotacao" : "songNome").focus(); }, 30);
   }
   function closeSongModal() { $("songModalOverlay").classList.add("hidden"); editingSongId = null; }
@@ -550,6 +552,7 @@
     });
   }
   $("newSongBtn").addEventListener("click", function () { openSongModal(null); });
+  $("songAnotacao").addEventListener("input", function () { autoGrow($("songAnotacao"), 0.35); });
   $("songCancelBtn").addEventListener("click", closeSongModal);
   $("songModalOverlay").addEventListener("click", function (ev) {
     if (ev.target === $("songModalOverlay")) closeSongModal();
@@ -584,8 +587,37 @@
   });
 
   // ============================================================
-  // Modo Play: um slide por música; rolar para os lados navega
+  // Modo Play: um slide por música (ou por parágrafo); rolar para os lados navega
   // ============================================================
+  var PLAY_KEY = "repertorio-digital:play:v1";
+  var playSettings = { size: 22, split: false };
+  try {
+    var savedPlay = JSON.parse(localStorage.getItem(PLAY_KEY) || "null");
+    if (savedPlay) {
+      playSettings.size = Math.max(14, Math.min(56, parseInt(savedPlay.size, 10) || 22));
+      playSettings.split = !!savedPlay.split;
+    }
+  } catch (e) { /* ignore */ }
+  function savePlaySettings() {
+    try { localStorage.setItem(PLAY_KEY, JSON.stringify(playSettings)); } catch (e) { /* ignore */ }
+  }
+  function applyPlaySettings() {
+    $("playScreen").style.setProperty("--note-size", playSettings.size + "px");
+    $("playSize").value = playSettings.size;
+    $("playSizeVal").textContent = playSettings.size + " px";
+    $("playSplit").checked = playSettings.split;
+  }
+
+  // textarea que começa pequena, cresce com o texto e para numa altura máxima
+  // proporcional à altura do aparelho (depois disso rola por dentro).
+  function autoGrow(ta, frac) {
+    var cap = Math.max(80, Math.round(Math.min(window.innerHeight * frac, $("phone").clientHeight * 0.55)));
+    ta.style.height = "auto";
+    var h = ta.scrollHeight + 2;
+    ta.style.height = Math.min(h, cap) + "px";
+    ta.style.overflowY = h > cap ? "auto" : "hidden";
+  }
+
   var wakeLock = null;
   function requestWake() {
     try {
@@ -596,74 +628,113 @@
     try { if (wakeLock) { wakeLock.release(); } } catch (e) { /* ignore */ }
     wakeLock = null;
   }
-  function noteHtml(s) {
-    return s.anotacao
-      ? escapeHtml(s.anotacao)
-      : '<span class="ps-empty">Sem anotações. Toque em ✎ para adicionar.</span>';
+
+  function splitParagraphs(text) {
+    return String(text || "").split(/\n[ \t]*\n+/).map(function (t) { return t.trim(); }).filter(Boolean);
   }
+  function noteHtml(txt) {
+    return txt ? escapeHtml(txt) : '<span class="ps-empty">Sem anotações. Toque em ✎ para adicionar.</span>';
+  }
+
+  var playSlides = []; // [{id, part, parts, song}]
   function buildPlaySlides() {
+    playSlides = [];
     $("playTrack").innerHTML = setlist.map(function (id, i) {
       var s = songsById[id];
       if (!s) return "";
+      var parts = playSettings.split ? splitParagraphs(s.anotacao) : [String(s.anotacao || "")];
+      if (!parts.length) parts = [""];
       var chips = [s.afinacao, s.quemComeca, s.categoria, s.nacional].filter(Boolean).map(function (c) {
         return '<span class="ps-chip">' + escapeHtml(c) + "</span>";
       }).join("");
-      return '<article class="play-slide" data-id="' + escapeHtml(id) + '">' +
-        '<div class="ps-num">' + String(i + 1).padStart(2, "0") + "</div>" +
-        '<h2 class="ps-name">' + escapeHtml(s.nome) + "</h2>" +
-        (s.banda ? '<div class="ps-band">' + escapeHtml(s.banda) + "</div>" : "") +
-        '<div class="ps-chips">' + chips + "</div>" +
-        '<div class="ps-note">' + noteHtml(s) + "</div>" +
-        '<textarea class="ps-edit hidden" rows="5" maxlength="600" placeholder="Anotações desta música"></textarea>' +
-        '<div class="ps-actions"><button type="button" class="btn ps-edit-btn">✎ Anotação</button>' +
-        '<button type="button" class="btn ps-cancel hidden">Cancelar</button>' +
-        '<button type="button" class="btn primary ps-save hidden">Salvar</button></div>' +
-        "</article>";
+      return parts.map(function (txt, pi) {
+        playSlides.push({ id: id, part: pi, parts: parts.length, song: i });
+        return '<article class="play-slide" data-id="' + escapeHtml(id) + '" data-part="' + pi + '">' +
+          '<div class="ps-num">' + String(i + 1).padStart(2, "0") +
+          (parts.length > 1 ? '<span class="ps-part">parte ' + (pi + 1) + "/" + parts.length + "</span>" : "") + "</div>" +
+          '<h2 class="ps-name">' + escapeHtml(s.nome) + "</h2>" +
+          (s.banda ? '<div class="ps-band">' + escapeHtml(s.banda) + "</div>" : "") +
+          '<div class="ps-chips">' + chips + "</div>" +
+          '<div class="ps-note">' + noteHtml(txt) + "</div>" +
+          '<textarea class="ps-edit hidden" rows="3" maxlength="6000" placeholder="Anotações desta música"></textarea>' +
+          '<div class="ps-actions"><button type="button" class="btn ps-edit-btn">✎ Anotação</button>' +
+          '<button type="button" class="btn ps-cancel hidden">Cancelar</button>' +
+          '<button type="button" class="btn primary ps-save hidden">Salvar</button></div>' +
+          "</article>";
+      }).join("");
     }).join("");
     each("#playTrack .play-slide", wirePlaySlide);
   }
   function wirePlaySlide(slide) {
-    var id = slide.dataset.id;
+    var id = slide.dataset.id, part = parseInt(slide.dataset.part, 10) || 0;
     var note = slide.querySelector(".ps-note"), ta = slide.querySelector(".ps-edit");
     var bEdit = slide.querySelector(".ps-edit-btn"), bSave = slide.querySelector(".ps-save"), bCancel = slide.querySelector(".ps-cancel");
     function mode(editing) {
       note.classList.toggle("hidden", editing); ta.classList.toggle("hidden", !editing);
       bEdit.classList.toggle("hidden", editing); bSave.classList.toggle("hidden", !editing); bCancel.classList.toggle("hidden", !editing);
+      if (editing) autoGrow(ta, 0.4);
     }
+    ta.addEventListener("input", function () { autoGrow(ta, 0.4); });
     bEdit.addEventListener("click", function () { ta.value = songsById[id].anotacao || ""; mode(true); ta.focus(); });
     bCancel.addEventListener("click", function () { mode(false); });
     bSave.addEventListener("click", function () {
       var s = songsById[id];
       api.songs.update(id, songPayload(s, { anotacao: ta.value })).then(function (u) {
         s.anotacao = u.anotacao;
-        note.innerHTML = noteHtml(s);
-        mode(false);
+        rebuildPlay(id, part);
         renderSetlist(); renderBank();
       }).catch(function (e) { alert(errMsg(e)); });
     });
   }
+
   function playIndex() {
     var t = $("playTrack");
     return t.clientWidth ? Math.round(t.scrollLeft / t.clientWidth) : 0;
   }
   function updatePlayCounter() {
-    $("playCounter").textContent = (Math.min(playIndex(), setlist.length - 1) + 1) + " / " + setlist.length;
+    if (!playSlides.length) return;
+    var sl = playSlides[Math.min(playIndex(), playSlides.length - 1)];
+    var txt = (sl.song + 1) + " / " + setlist.length;
+    if (sl.parts > 1) txt += " · " + (sl.part + 1) + "/" + sl.parts;
+    $("playCounter").textContent = txt;
   }
-  function openPlay(startId) {
-    if (!setlist.length) { alert("Adicione músicas ao repertório antes de dar play."); return; }
-    hidePopup();
-    buildPlaySlides();
-    $("playScreen").classList.remove("hidden");
-    var idx = startId ? Math.max(0, setlist.indexOf(startId)) : 0;
+  function slideIndexOf(id, part) {
+    var first = -1, i;
+    for (i = 0; i < playSlides.length; i++) {
+      if (playSlides[i].id !== id) continue;
+      if (first === -1) first = i;
+      if (playSlides[i].part === part) return i;
+    }
+    return first === -1 ? 0 : first;
+  }
+  function jumpToSlide(idx) {
     var t = $("playTrack");
     t.style.scrollBehavior = "auto";
     t.scrollLeft = idx * t.clientWidth;
     t.style.scrollBehavior = "";
+    playTarget = idx;
     updatePlayCounter();
+  }
+  function rebuildPlay(keepId, keepPart) {
+    if (keepId === undefined) {
+      var cur = playSlides[Math.min(playIndex(), playSlides.length - 1)];
+      keepId = cur && cur.id; keepPart = cur ? cur.part : 0;
+    }
+    buildPlaySlides();
+    jumpToSlide(slideIndexOf(keepId, keepPart));
+  }
+  function openPlay(startId) {
+    if (!setlist.length) { alert("Adicione músicas ao repertório antes de dar play."); return; }
+    hidePopup();
+    applyPlaySettings();
+    buildPlaySlides();
+    $("playScreen").classList.remove("hidden");
+    jumpToSlide(startId ? slideIndexOf(startId, 0) : 0);
     requestWake();
   }
   function closePlay() {
     $("playScreen").classList.add("hidden");
+    setPlaySettingsOpen(false);
     releaseWake();
   }
   var playTarget = 0, playLastScroll = 0;
@@ -671,14 +742,35 @@
     var t = $("playTrack");
     // se ainda está rolando, parte do destino anterior (cliques rápidos não se perdem)
     var base = Date.now() - playLastScroll < 200 ? playTarget : playIndex();
-    playTarget = Math.max(0, Math.min(setlist.length - 1, base + dir));
+    playTarget = Math.max(0, Math.min(playSlides.length - 1, base + dir));
     t.scrollTo({ left: playTarget * t.clientWidth, behavior: "smooth" });
+  }
+  function setPlaySettingsOpen(open) {
+    $("playSettings").classList.toggle("hidden", !open);
+    $("playSettingsBtn").setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  function setPlaySize(v) {
+    playSettings.size = Math.max(14, Math.min(56, Math.round(v)));
+    applyPlaySettings(); savePlaySettings();
   }
   $("playBtn").addEventListener("click", function () { openPlay(null); });
   $("playClose").addEventListener("click", closePlay);
   $("playPrev").addEventListener("click", function () { playGo(-1); });
   $("playNext").addEventListener("click", function () { playGo(1); });
+  $("playSettingsBtn").addEventListener("click", function () {
+    setPlaySettingsOpen($("playSettings").classList.contains("hidden"));
+  });
+  $("playSize").addEventListener("input", function (ev) { setPlaySize(parseInt(ev.target.value, 10)); });
+  $("playSizeDown").addEventListener("click", function () { setPlaySize(playSettings.size - 2); });
+  $("playSizeUp").addEventListener("click", function () { setPlaySize(playSettings.size + 2); });
+  $("playSplit").addEventListener("change", function (ev) {
+    playSettings.split = ev.target.checked; savePlaySettings();
+    rebuildPlay();
+  });
   $("playTrack").addEventListener("scroll", function () { playLastScroll = Date.now(); updatePlayCounter(); });
+  window.addEventListener("resize", function () {
+    if (!$("playScreen").classList.contains("hidden")) jumpToSlide(Math.min(playIndex(), playSlides.length - 1));
+  });
   document.addEventListener("keydown", function (ev) {
     if ($("playScreen").classList.contains("hidden")) return;
     if (/^(TEXTAREA|INPUT)$/.test(ev.target.tagName)) return;
@@ -689,6 +781,7 @@
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "visible" && !$("playScreen").classList.contains("hidden")) requestWake();
   });
+  applyPlaySettings();
 
   // ============================================================
   // Importar CSV + CSV de exemplo
@@ -719,6 +812,129 @@
     return { rows: res.songs, info: res.info, headers: (parsed.data && parsed.data[0]) || [] };
   }
 
+  // ----------------------------------------------------------
+  // Duplicadas no upload: manter / sobrepor / comparar
+  // ----------------------------------------------------------
+  var CMP_FIELDS = [
+    ["nome", "Nome"], ["bandaOriginal", "Banda"], ["afinacao", "Afinação"], ["quemComeca", "Quem começa"],
+    ["categoria", "Categoria"], ["nacional", "Nac./Int."], ["anotacao", "Anotação"]
+  ];
+  function nk(s) { return stripAccents(String(s == null ? "" : s)).toLowerCase().replace(/\s+/g, " ").trim(); }
+  function findExisting(row) {
+    var n = nk(row.nome), b = nk(row.bandaOriginal), i, s;
+    for (i = 0; i < songs.length; i++) {
+      s = songs[i];
+      if (nk(s.nome) === n && nk(s.bandaOriginal) === b) return s;
+    }
+    if (!b) { // arquivo sem banda: casa só pelo nome
+      for (i = 0; i < songs.length; i++) if (nk(songs[i].nome) === n) return songs[i];
+    }
+    return null;
+  }
+  // Quais campos mudariam se sobrepor (campo vazio no arquivo NÃO apaga o atual).
+  // Nome e banda são a identidade da música (já casaram), então não entram como diferença.
+  function diffFields(existing, row) {
+    return CMP_FIELDS.filter(function (f) {
+      if (f[0] === "nome" || f[0] === "bandaOriginal") return false;
+      var nv = String(row[f[0]] || "").trim(), ov = String(existing[f[0]] || "").trim();
+      return nv !== "" && nv !== ov;
+    }).map(function (f) { return f[0]; });
+  }
+  function planImport(rows) {
+    var byKey = {}, order = [];
+    rows.forEach(function (r) { // linhas repetidas no próprio arquivo: vale a última
+      var k = nk(r.nome) + "|" + nk(r.bandaOriginal);
+      if (!(k in byKey)) order.push(k);
+      byKey[k] = r;
+    });
+    var plan = { fresh: [], dups: [], identical: 0 };
+    order.forEach(function (k) {
+      var r = byKey[k], ex = findExisting(r);
+      if (!ex) { plan.fresh.push(r); return; }
+      var d = diffFields(ex, r);
+      if (!d.length) { plan.identical++; return; }
+      plan.dups.push({ row: r, existing: ex, diffs: d });
+    });
+    return plan;
+  }
+  function cellHtml(v) {
+    v = String(v || "");
+    return '<div class="cellbox">' + (v ? escapeHtml(v) : '<span class="nil">—</span>') + "</div>";
+  }
+  // Abre a tela de comparação. Resolve com {índice: "keep"|"overwrite"} ou null (cancelou).
+  function askDuplicates(plan) {
+    if (!plan.dups.length) return Promise.resolve({});
+    return new Promise(function (resolve) {
+      var choices = {};
+      plan.dups.forEach(function (_, i) { choices[i] = "keep"; });
+      $("dupSummary").textContent = plan.dups.length + (plan.dups.length === 1 ? " música já existe" : " músicas já existem") +
+        " no banco com dados diferentes. Compare e escolha. Verde = valor do arquivo, vermelho = valor atual do banco." +
+        (plan.identical ? " (" + plan.identical + " idêntica(s) foram ignoradas.)" : "") +
+        " Sobrepor usa os campos preenchidos do arquivo; campos vazios no arquivo mantêm o atual.";
+      $("dupList").innerHTML = plan.dups.map(function (d, i) {
+        var rows = CMP_FIELDS.filter(function (f) {
+          if (f[0] === "nome" || f[0] === "bandaOriginal") return false; // já aparecem no título
+          return d.existing[f[0]] || d.row[f[0]];
+        }).map(function (f) {
+          var isDiff = d.diffs.indexOf(f[0]) !== -1;
+          return "<tr><td>" + f[1] + '</td><td class="' + (isDiff ? "diff-old" : "") + '">' + cellHtml(d.existing[f[0]]) +
+            '</td><td class="' + (isDiff ? "diff-new" : "") + '">' + cellHtml(d.row[f[0]]) + "</td></tr>";
+        }).join("");
+        return '<div class="dup-card" data-i="' + i + '">' +
+          '<div class="dup-title">' + escapeHtml(d.existing.nome) + (d.existing.bandaOriginal ? "<small>" + escapeHtml(d.existing.bandaOriginal) + "</small>" : "") + "</div>" +
+          '<table class="dup-cmp"><thead><tr><th></th><th>No banco</th><th>No arquivo</th></tr></thead><tbody>' + rows + "</tbody></table>" +
+          '<div class="dup-choice"><button type="button" data-c="keep" class="active">Manter a do banco</button>' +
+          '<button type="button" data-c="overwrite">Sobrepor com o arquivo</button></div></div>';
+      }).join("");
+      function paint(card) {
+        var c = choices[card.dataset.i];
+        each("#dupList .dup-card[data-i='" + card.dataset.i + "'] .dup-choice button", function (b) { b.classList.toggle("active", b.dataset.c === c); });
+      }
+      each("#dupList .dup-card", function (card) {
+        each("#dupList .dup-card[data-i='" + card.dataset.i + "'] .dup-choice button", function (btn) {
+          btn.addEventListener("click", function () { choices[card.dataset.i] = btn.dataset.c; paint(card); });
+        });
+      });
+      function setAll(c) { each("#dupList .dup-card", function (card) { choices[card.dataset.i] = c; paint(card); }); }
+      function done(val) {
+        $("dupOverlay").classList.add("hidden");
+        $("dupKeepAll").onclick = $("dupOverwriteAll").onclick = $("dupApply").onclick = $("dupCancel").onclick = null;
+        resolve(val);
+      }
+      $("dupKeepAll").onclick = function () { setAll("keep"); };
+      $("dupOverwriteAll").onclick = function () { setAll("overwrite"); };
+      $("dupApply").onclick = function () { done(choices); };
+      $("dupCancel").onclick = function () { done(null); };
+      $("dupOverlay").classList.remove("hidden");
+      $("dupList").scrollTop = 0;
+    });
+  }
+  // Aplica: cria as novas, atualiza as escolhidas para sobrepor. Devolve contagens.
+  function applyImportPlan(plan, choices) {
+    var res = { created: 0, overwritten: 0, kept: 0, identical: plan.identical };
+    var chain = Promise.resolve();
+    if (plan.fresh.length) {
+      chain = chain.then(function () { return api.songs.importCsv(currentBand.id, plan.fresh); })
+        .then(function (r) { res.created = r.created; res.overwritten += r.updated; });
+    }
+    plan.dups.forEach(function (d, i) {
+      if (choices[i] !== "overwrite") { res.kept++; return; }
+      chain = chain.then(function () {
+        var merged = songPayload(d.existing, {});
+        d.diffs.forEach(function (f) { merged[f] = d.row[f]; });
+        return api.songs.update(d.existing.id, merged);
+      }).then(function () { res.overwritten++; });
+    });
+    return chain.then(function () { return res; });
+  }
+  function summaryMsg(res) {
+    var parts = [res.created + " nova(s)"];
+    if (res.overwritten) parts.push(res.overwritten + " sobreposta(s)");
+    if (res.kept) parts.push(res.kept + " mantida(s)");
+    if (res.identical) parts.push(res.identical + " idêntica(s) ignorada(s)");
+    return parts.join(", ");
+  }
+
   function importCsvText(text, label) {
     var parsed = csvTextToRows(text), rows = parsed.rows;
     if (!rows.length) {
@@ -728,13 +944,18 @@
       setStatus("importStatus", "CSV lido, mas " + why, true);
       return Promise.resolve();
     }
-    return api.songs.importCsv(currentBand.id, rows).then(function (res) {
-      return loadBank().then(function () {
-        renderBank();
-        var msg = label + ": " + res.created + " nova(s), " + res.updated + " atualizada(s).";
-        if (parsed.info.unknown.length) msg += " Colunas ignoradas: " + parsed.info.unknown.join(", ") + ".";
-        setStatus("importStatus", msg);
-        toast("Músicas importadas: " + res.created + " nova(s), " + res.updated + " atualizada(s).");
+    var plan = planImport(rows);
+    setDrawer(false);
+    return askDuplicates(plan).then(function (choices) {
+      if (!choices) { setStatus("importStatus", "Importação cancelada."); return; }
+      return applyImportPlan(plan, choices).then(function (res) {
+        return loadBank().then(function () {
+          renderBank();
+          var msg = label + ": " + summaryMsg(res) + ".";
+          if (parsed.info.unknown.length) msg += " Colunas ignoradas: " + parsed.info.unknown.join(", ") + ".";
+          setStatus("importStatus", msg);
+          toast("Músicas importadas: " + summaryMsg(res) + ".");
+        });
       });
     }).catch(function (e) { setStatus("importStatus", "Erro ao importar: " + errMsg(e), true); });
   }
@@ -829,24 +1050,26 @@
         return x - y || a.i - b.i;
       });
     }
-    return api.songs.importCsv(currentBand.id, rows).then(function (res) {
-      return loadBank().then(function () {
-        var byKey = {};
-        songs.forEach(function (s) { byKey[songKey(s.nome, s.bandaOriginal)] = s.id; });
-        var ids = [];
-        ordered.forEach(function (o) {
-          var id = byKey[songKey(o.r.nome, o.r.bandaOriginal)];
-          if (id && ids.indexOf(id) === -1) ids.push(id);
+    var plan = planImport(rows);
+    setDrawer(false);
+    return askDuplicates(plan).then(function (choices) {
+      if (!choices) { setStatus("importStatus", "Importação cancelada."); return; }
+      return applyImportPlan(plan, choices).then(function (res) {
+        return loadBank().then(function () {
+          var ids = [];
+          ordered.forEach(function (o) {
+            var ex = findExisting(o.r);
+            if (ex && ids.indexOf(ex.id) === -1) ids.push(ex.id);
+          });
+          setlist = ids;
+          saveSetlistToStorage();
+          renderSetlist();
+          renderBank();
+          setView("setlist");
+          var msg = label + ": repertório com " + ids.length + " música(s) (" + summaryMsg(res) + ").";
+          setStatus("importStatus", msg);
+          toast("Repertório importado (" + ids.length + ").");
         });
-        setlist = ids;
-        saveSetlistToStorage();
-        renderSetlist();
-        renderBank();
-        setView("setlist");
-        var msg = label + ": repertório com " + ids.length + " música(s)";
-        if (res.created) msg += "; " + res.created + " nova(s) no banco";
-        setStatus("importStatus", msg + ".");
-        toast("Repertório importado (" + ids.length + ").");
       });
     }).catch(function (e) { setStatus("importStatus", "Erro ao importar repertório: " + errMsg(e), true); });
   }
